@@ -21,6 +21,10 @@ export const AuthProvider = ({ children }) => {
           tokenService.clearAuth();
           setUser(null);
         }
+      } else {
+        // Clear stale local storage state if no access token exists
+        tokenService.clearAuth();
+        setUser(null);
       }
       setLoading(false);
     };
@@ -30,13 +34,34 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (credentials) => {
     const data = await authService.login(credentials);
-    setUser(data.user);
+    
+    // Save tokens and user info if returned from login payload
+    if (data.access) {
+      tokenService.setTokens(data.access, data.refresh);
+    }
+    
+    if (data.user) {
+      setUser(data.user);
+      tokenService.setUser(data.user);
+    } else {
+      // Fetch user profile if login response only returns JWT tokens
+      const profileData = await authService.getProfile();
+      setUser(profileData);
+      tokenService.setUser(profileData);
+    }
+    
     return data;
   };
 
   const logout = () => {
-    authService.logout();
-    setUser(null);
+    try {
+      authService.logout();
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      tokenService.clearAuth();
+      setUser(null);
+    }
   };
 
   const hasRole = (allowedRoles) => {

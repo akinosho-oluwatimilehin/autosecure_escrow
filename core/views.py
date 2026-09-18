@@ -1,5 +1,6 @@
 import uuid
 from django.db import transaction
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 
 from rest_framework import generics, permissions, status, viewsets, serializers
@@ -41,6 +42,11 @@ from .serializers import (
     UserRegistrationSerializer,
     VehicleSerializer,
 )
+
+
+def home_view(request):
+    """Display a simple landing page at the project root."""
+    return HttpResponse("<h1>AutoSecure Escrow</h1><p>API server is running.</p>")
 
 
 # =============================================================================
