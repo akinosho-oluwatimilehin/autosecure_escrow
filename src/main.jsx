@@ -1,11 +1,10 @@
 import React from 'react';
-import { AuthProvider } from './context/AuthContext';
-import AppRoutes from './AppRoutes';
+import { createRoot } from 'react-dom/client';
+import App from './app.jsx';
+import './styles.css';
 
-export default function App() {
-  return (
-    <AuthProvider>
-      <AppRoutes />
-    </AuthProvider>
-  );
-}
+createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
