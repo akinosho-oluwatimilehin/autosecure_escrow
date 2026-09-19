@@ -107,7 +107,7 @@ class LogisticsBookingSerializer(serializers.ModelSerializer):
     class Meta:
         model = LogisticsBooking
         fields = ['id', 'escrow', 'carrier', 'pickup_address', 'delivery_address', 'tracking_number', 'status', 'estimated_delivery', 'delivered_at', 'created_at']
-        read_only_fields = ['id', 'carrier', 'created_at']
+        read_only_fields = ['id', 'carrier', 'tracking_number', 'status', 'delivered_at', 'created_at']
 
 
 class LogisticsStatusUpdateSerializer(serializers.ModelSerializer):
@@ -162,6 +162,24 @@ class EscrowContractCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = EscrowContract
         fields = ['id', 'seller', 'vehicle', 'inspector', 'carrier', 'vehicle_details', 'amount', 'status']
+        read_only_fields = ['id', 'status']
+
+    def validate_seller(self, value):
+        if value.role != User.Role.DEALERSHIP:
+            raise serializers.ValidationError("Seller must hold the DEALERSHIP role.")
+        return value
+
+    def validate_vehicle(self, value):
+        if value and not value.is_available:
+            raise serializers.ValidationError("Selected vehicle is no longer available.")
+        return value
+
+    def validate(self, data):
+        vehicle = data.get('vehicle')
+        seller = data.get('seller')
+        if vehicle and seller and vehicle.seller_id != seller.id:
+            raise serializers.ValidationError({"vehicle": "Selected vehicle does not belong to the selected seller."})
+        return data
 
     def create(self, validated_data):
         validated_data['buyer'] = self.context['request'].user

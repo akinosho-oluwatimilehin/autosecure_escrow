@@ -29,12 +29,12 @@ function App() {
           </Route>
 
           {/* Role-Restricted Route: Mechanics / Repair Shops Only */}
-          <Route element={<ProtectedRoute allowedRoles={['mechanic', 'admin']} />}>
+          <Route element={<ProtectedRoute allowedRoles={['REPAIR_SHOP']} />}>
             <Route path="/inspections/*" element={<InspectionPortalPage />} />
           </Route>
 
           {/* Role-Restricted Route: Logistics Carriers Only */}
-          <Route element={<ProtectedRoute allowedRoles={['carrier', 'admin']} />}>
+          <Route element={<ProtectedRoute allowedRoles={['LOGISTICS']} />}>
             <Route path="/carrier/*" element={<CarrierPortalPage />} />
           </Route>
 

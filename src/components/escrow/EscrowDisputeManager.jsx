@@ -18,7 +18,7 @@ const EscrowDisputeManager = ({
     vehicle: "2021 Toyota Camry (VIN: 4T1B11HK2MU)",
     buyerName: "Oluwatimilehin",
     sellerName: "Autochek Prime Dealership",
-    status: "DISPUTED", // Options: "FUNDED", "DISPUTED", "RESOLVED", "REFUNDED"
+    status: "DISPUTED",
     dispute: {
       id: "DSP-1029",
       initiatedBy: "Buyer",
@@ -99,6 +99,9 @@ const EscrowDisputeManager = ({
     }
   };
 
+  const isResolved = activeEscrow.dispute?.status === 'RESOLVED';
+  const hasDispute = activeEscrow.status === 'DISPUTED' || Boolean(activeEscrow.dispute);
+
   return (
     <div className="max-w-4xl mx-auto p-4 md:p-6 bg-slate-50 min-h-screen text-slate-800">
       {/* Top Header / Navigation */}
@@ -133,15 +136,15 @@ const EscrowDisputeManager = ({
       </div>
 
       {/* CASE 1: Active Dispute Exists or Resolved */}
-      {activeEscrow.status === 'DISPUTED' || activeEscrow.status === 'RESOLVED' || activeEscrow.status === 'REFUNDED' ? (
+      {hasDispute ? (
         <div className="space-y-6">
           {/* Status Header Badge */}
           <div className={`p-5 rounded-xl border flex items-start gap-4 ${
-            activeEscrow.dispute?.status === 'RESOLVED' || activeEscrow.status === 'RESOLVED' || activeEscrow.status === 'REFUNDED'
+            isResolved
               ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
               : 'bg-amber-50 border-amber-200 text-amber-900'
           }`}>
-            {activeEscrow.dispute?.status === 'RESOLVED' || activeEscrow.status === 'RESOLVED' || activeEscrow.status === 'REFUNDED' ? (
+            {isResolved ? (
               <CheckCircle2 className="w-6 h-6 text-emerald-600 shrink-0 mt-0.5" />
             ) : (
               <ShieldAlert className="w-6 h-6 text-amber-600 shrink-0 mt-0.5" />
@@ -149,7 +152,7 @@ const EscrowDisputeManager = ({
             <div className="flex-1">
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <h2 className="text-lg font-bold">
-                  {activeEscrow.dispute?.status === 'RESOLVED' || activeEscrow.status === 'RESOLVED' || activeEscrow.status === 'REFUNDED'
+                  {isResolved
                     ? 'Dispute Case Resolved'
                     : 'Dispute Open — Funds Locked'}
                 </h2>
@@ -158,7 +161,7 @@ const EscrowDisputeManager = ({
                 </span>
               </div>
               <p className="text-sm mt-1 opacity-90">
-                {activeEscrow.dispute?.status === 'RESOLVED' || activeEscrow.status === 'RESOLVED' || activeEscrow.status === 'REFUNDED'
+                {isResolved
                   ? 'An independent arbiter has reviewed the case and finalized payouts.'
                   : 'All transaction funds are safely frozen in escrow while platform administrators review evidence.'}
               </p>
@@ -179,9 +182,9 @@ const EscrowDisputeManager = ({
 
               <div className="relative">
                 <div className={`flex items-center gap-2 font-semibold text-sm ${
-                  activeEscrow.dispute?.status === 'RESOLVED' || activeEscrow.status === 'RESOLVED' ? 'text-slate-900' : 'text-amber-600'
+                  isResolved ? 'text-slate-900' : 'text-amber-600'
                 }`}>
-                  {activeEscrow.dispute?.status === 'RESOLVED' || activeEscrow.status === 'RESOLVED' ? (
+                  {isResolved ? (
                     <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                   ) : (
                     <Clock className="w-4 h-4 text-amber-500 animate-pulse" />
@@ -195,9 +198,9 @@ const EscrowDisputeManager = ({
 
               <div className="relative">
                 <div className={`flex items-center gap-2 font-semibold text-sm ${
-                  activeEscrow.dispute?.status === 'RESOLVED' || activeEscrow.status === 'RESOLVED' ? 'text-emerald-600' : 'text-slate-400'
+                  isResolved ? 'text-emerald-600' : 'text-slate-400'
                 }`}>
-                  {activeEscrow.dispute?.status === 'RESOLVED' || activeEscrow.status === 'RESOLVED' ? (
+                  {isResolved ? (
                     <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                   ) : (
                     <Clock className="w-4 h-4 text-slate-300" />

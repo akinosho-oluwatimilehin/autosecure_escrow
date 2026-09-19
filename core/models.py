@@ -155,4 +155,4 @@ class WalletTransaction(models.Model):
     timestamp = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.get_transaction_type_display()} - ₦{self.amount} ({self.user.username})"
+        return f"{self.get_transaction_type_display()} - NGN {self.amount} ({self.user.username})"

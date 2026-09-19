@@ -17,6 +17,9 @@ from .views import (
     LogisticsBookingListView,
     LogisticsBookingDetailView,
     LogisticsStatusUpdateView,
+    OpenDisputeView,
+    CancelAndRefundEscrowView,
+    ResolveDisputeAdminView,
 )
 
 # Router for Vehicle ModelViewSet
@@ -43,6 +46,7 @@ urlpatterns = [
     path('escrows/', EscrowContractListCreateView.as_view(), name='escrow_list_create'),
     path('escrows/<int:pk>/', EscrowContractDetailView.as_view(), name='escrow_detail'),
     path('escrows/<int:pk>/fund/', FundEscrowView.as_view(), name='escrow_fund'),
+    path('escrows/<int:pk>/cancel/', CancelAndRefundEscrowView.as_view(), name='escrow_cancel'),
 
     # -------------------------------------------------------------------------
     # 4. Field Inspection & Diagnostic Report Endpoints
@@ -52,7 +56,13 @@ urlpatterns = [
     path('escrows/<int:pk>/report/', InspectionReportDetailView.as_view(), name='escrow_report_detail'),
 
     # -------------------------------------------------------------------------
-    # 5. Carrier Delivery & Logistics Tracking Endpoints
+    # 5. Disputes & Admin Resolution Endpoints
+    # -------------------------------------------------------------------------
+    path('escrows/<int:pk>/dispute/', OpenDisputeView.as_view(), name='escrow_open_dispute'),
+    path('escrows/<int:pk>/resolve-dispute/', ResolveDisputeAdminView.as_view(), name='escrow_resolve_dispute'),
+
+    # -------------------------------------------------------------------------
+    # 6. Carrier Delivery & Logistics Tracking Endpoints
     # -------------------------------------------------------------------------
     path('logistics/', LogisticsBookingListView.as_view(), name='logistics_list'),
     path('logistics/book/', LogisticsBookingCreateView.as_view(), name='logistics_create'),

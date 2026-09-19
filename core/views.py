@@ -2,6 +2,7 @@ import uuid
 from django.db import transaction
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 
 from rest_framework import generics, permissions, status, viewsets, serializers
 from rest_framework.exceptions import PermissionDenied, ValidationError
@@ -127,7 +128,7 @@ class VehicleViewSet(viewsets.ModelViewSet):
         return queryset
 
     def perform_create(self, serializer):
-        serializer.save(dealership=self.request.user)
+        serializer.save(seller=self.request.user)
 
 
 # =============================================================================
@@ -146,16 +147,21 @@ class EscrowContractListCreateView(generics.ListCreateAPIView):
             return EscrowContractCreateSerializer
         return EscrowContractDetailSerializer
 
+    def get_permissions(self):
+        if self.request.method == 'POST':
+            return [permissions.IsAuthenticated(), IsBuyerUser()]
+        return [permissions.IsAuthenticated()]
+
     def get_queryset(self):
         user = self.request.user
         if user.role == user.Role.BUYER:
             return EscrowContract.objects.filter(buyer=user)
         elif user.role == user.Role.DEALERSHIP:
-            return EscrowContract.objects.filter(dealership=user)
+            return EscrowContract.objects.filter(seller=user)
         elif user.role == user.Role.REPAIR_SHOP:
-            return EscrowContract.objects.filter(repair_shop=user)
+            return EscrowContract.objects.filter(inspector=user)
         elif user.role == user.Role.LOGISTICS:
-            return EscrowContract.objects.filter(logisticsbooking__carrier=user)
+            return EscrowContract.objects.filter(carrier=user)
         return EscrowContract.objects.none()
 
     def perform_create(self, serializer):
@@ -173,8 +179,8 @@ class EscrowContractDetailView(generics.RetrieveAPIView):
 
 class FundEscrowView(generics.GenericAPIView):
     """
-    POST /api/escrows/{id}/fund/ : Buyer locks funds into escrow for a DRAFT contract.
-    Marks contract status as FUNDED and reserves the vehicle.
+    POST /api/escrows/{id}/fund/ : Buyer locks funds into escrow for a pending contract.
+    Marks contract status as active and reserves the vehicle.
     """
     permission_classes = [permissions.IsAuthenticated, IsBuyerUser]
     serializer_class = FundEscrowSerializer
@@ -182,7 +188,7 @@ class FundEscrowView(generics.GenericAPIView):
     def post(self, request, pk):
         contract = get_object_or_404(EscrowContract, pk=pk, buyer=request.user)
         
-        if contract.status != EscrowContract.Status.DRAFT:
+        if contract.status != EscrowContract.Status.PENDING:
             return Response(
                 {"error": f"Cannot fund contract in state '{contract.get_status_display()}'."},
                 status=status.HTTP_400_BAD_REQUEST
@@ -192,12 +198,20 @@ class FundEscrowView(generics.GenericAPIView):
         serializer.is_valid(raise_exception=True)
 
         with transaction.atomic():
-            contract.status = EscrowContract.Status.FUNDED
+            contract.status = EscrowContract.Status.ACTIVE
             contract.save()
 
-            vehicle = contract.vehicle
-            vehicle.is_available = False
-            vehicle.save()
+            if contract.vehicle:
+                contract.vehicle.is_available = False
+                contract.vehicle.save()
+
+            WalletTransaction.objects.create(
+                user=request.user,
+                escrow=contract,
+                amount=contract.amount,
+                transaction_type=WalletTransaction.TransactionType.DEPOSIT,
+                reference=serializer.validated_data['payment_reference'],
+            )
 
         return Response({
             "message": "Escrow account funded successfully. Funds locked.",
@@ -221,31 +235,34 @@ class DispatchInspectorView(generics.UpdateAPIView):
     permission_classes = [permissions.IsAuthenticated, IsRepairShopUser]
 
     def get_queryset(self):
-        return EscrowContract.objects.filter(repair_shop=self.request.user)
+        return EscrowContract.objects.filter(status=EscrowContract.Status.ACTIVE)
 
     def perform_update(self, serializer):
         contract = self.get_object()
-        if contract.status != EscrowContract.Status.FUNDED:
+        if contract.status != EscrowContract.Status.ACTIVE:
             raise serializers.ValidationError(
                 {"status": f"Cannot dispatch inspector for a contract in '{contract.get_status_display()}' state."}
             )
-        serializer.save()
+        inspector = User.objects.get(id=serializer.validated_data['inspector_id'])
+        contract.inspector = inspector
+        contract.status = EscrowContract.Status.INSPECTION
+        contract.save(update_fields=['inspector', 'status', 'updated_at'])
 
 
 class SubmitInspectionReportView(generics.CreateAPIView):
     """
     POST /api/escrows/{id}/submit-report/ : Repair Shop submits full diagnostic report.
-    Automatically transitions contract status to PASSED or FAILED.
+    Automatically transitions contract status based on the inspection recommendation.
     """
     permission_classes = [permissions.IsAuthenticated, IsRepairShopUser]
     serializer_class = SubmitInspectionReportSerializer
 
     def create(self, request, pk):
-        contract = get_object_or_404(EscrowContract, pk=pk, repair_shop=request.user)
+        contract = get_object_or_404(EscrowContract, pk=pk, inspector=request.user)
 
-        if contract.status != EscrowContract.Status.FUNDED:
+        if contract.status not in [EscrowContract.Status.ACTIVE, EscrowContract.Status.INSPECTION]:
             return Response(
-                {"error": f"Inspection reports can only be submitted for FUNDED contracts. Current state: '{contract.get_status_display()}'."},
+                {"error": f"Inspection reports can only be submitted for active inspection contracts. Current state: '{contract.get_status_display()}'."},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -260,15 +277,14 @@ class SubmitInspectionReportView(generics.CreateAPIView):
 
         with transaction.atomic():
             report = serializer.save(
-                escrow_contract=contract,
-                repair_shop=request.user,
+                escrow=contract,
                 inspector=request.user
             )
 
-            if report.overall_status == InspectionReport.OverallStatus.PASSED:
-                contract.status = EscrowContract.Status.PASSED
+            if report.recommendation == InspectionReport.Recommendation.PASS and report.passed_inspection:
+                contract.status = EscrowContract.Status.LOGISTICS
             else:
-                contract.status = EscrowContract.Status.FAILED
+                contract.status = EscrowContract.Status.DISPUTED
             contract.save()
 
         return Response({
@@ -291,10 +307,10 @@ class InspectionReportDetailView(generics.RetrieveAPIView):
         contract_id = self.kwargs.get('pk')
         contract = get_object_or_404(EscrowContract, pk=contract_id)
         
-        if self.request.user not in [contract.buyer, contract.dealership, contract.repair_shop]:
+        if self.request.user not in [contract.buyer, contract.seller, contract.inspector]:
             self.permission_denied(self.request, message="You do not have permission to view this report.")
 
-        return get_object_or_404(InspectionReport, escrow_contract=contract)
+        return get_object_or_404(InspectionReport, escrow=contract)
 
 
 # =============================================================================
@@ -305,25 +321,28 @@ class LogisticsBookingCreateView(generics.CreateAPIView):
     """
     POST /api/logistics/book/ : Assign a logistics carrier to an active, funded contract.
     """
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsLogisticsUser]
     serializer_class = LogisticsBookingSerializer
 
     def perform_create(self, serializer):
-        contract = serializer.validated_data['escrow_contract']
+        contract = serializer.validated_data['escrow']
         
-        if contract.status not in [EscrowContract.Status.PASSED, EscrowContract.Status.FUNDED]:
+        if contract.status not in [EscrowContract.Status.ACTIVE, EscrowContract.Status.LOGISTICS]:
             raise serializers.ValidationError(
-                {"escrow_contract": "Logistics can only be booked for funded or inspection-passed contracts."}
+                {"escrow": "Logistics can only be booked for active or inspection-cleared contracts."}
             )
 
         tracking_num = f"TRK-{uuid.uuid4().hex[:8].upper()}"
-        carrier_user = self.request.user if self.request.user.role == self.request.user.Role.LOGISTICS else serializer.validated_data.get('carrier')
+        carrier_user = self.request.user
         
         serializer.save(
             carrier=carrier_user,
             tracking_number=tracking_num,
-            status=LogisticsBooking.Status.DISPATCHED
+            status=LogisticsBooking.Status.ASSIGNED
         )
+        contract.carrier = carrier_user
+        contract.status = EscrowContract.Status.LOGISTICS
+        contract.save(update_fields=['carrier', 'status', 'updated_at'])
 
 
 class LogisticsBookingListView(generics.ListAPIView):
@@ -338,9 +357,9 @@ class LogisticsBookingListView(generics.ListAPIView):
         if user.role == user.Role.LOGISTICS:
             return LogisticsBooking.objects.filter(carrier=user)
         elif user.role == user.Role.BUYER:
-            return LogisticsBooking.objects.filter(escrow_contract__buyer=user)
+            return LogisticsBooking.objects.filter(escrow__buyer=user)
         elif user.role == user.Role.DEALERSHIP:
-            return LogisticsBooking.objects.filter(escrow_contract__dealership=user)
+            return LogisticsBooking.objects.filter(escrow__seller=user)
         return LogisticsBooking.objects.none()
 
 
@@ -348,9 +367,18 @@ class LogisticsBookingDetailView(generics.RetrieveAPIView):
     """
     GET /api/logistics/{id}/ : Retrieve real-time shipment status and tracking details.
     """
-    queryset = LogisticsBooking.objects.all()
     serializer_class = LogisticsBookingSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.role == user.Role.LOGISTICS:
+            return LogisticsBooking.objects.filter(carrier=user)
+        if user.role == user.Role.BUYER:
+            return LogisticsBooking.objects.filter(escrow__buyer=user)
+        if user.role == user.Role.DEALERSHIP:
+            return LogisticsBooking.objects.filter(escrow__seller=user)
+        return LogisticsBooking.objects.none()
 
 
 class LogisticsStatusUpdateView(generics.UpdateAPIView):
@@ -358,16 +386,18 @@ class LogisticsStatusUpdateView(generics.UpdateAPIView):
     PATCH /api/logistics/{id}/update-status/ : Carrier updates transit state, GPS location, or ETA.
     Automates escrow completion when marked DELIVERED.
     """
-    queryset = LogisticsBooking.objects.all()
     serializer_class = LogisticsStatusUpdateSerializer
     permission_classes = [permissions.IsAuthenticated, IsLogisticsUser]
+
+    def get_queryset(self):
+        return LogisticsBooking.objects.filter(carrier=self.request.user)
 
     def perform_update(self, serializer):
         with transaction.atomic():
             booking = serializer.save()
             
             if booking.status == LogisticsBooking.Status.DELIVERED:
-                contract = booking.escrow_contract
+                contract = booking.escrow
                 contract.status = EscrowContract.Status.COMPLETED
                 contract.save()
 
@@ -389,7 +419,7 @@ class OpenDisputeView(APIView):
         except EscrowContract.DoesNotExist:
             return Response({"detail": "Escrow contract not found."}, status=status.HTTP_404_NOT_FOUND)
 
-        if request.user not in [escrow.buyer, escrow.dealership]:
+        if request.user not in [escrow.buyer, escrow.seller]:
             raise PermissionDenied("You are not a participant in this escrow contract.")
 
         serializer = OpenDisputeSerializer(data=request.data, context={'escrow': escrow})
@@ -398,10 +428,10 @@ class OpenDisputeView(APIView):
         with transaction.atomic():
             dispute = serializer.save(
                 escrow=escrow,
-                initiated_by=request.user,
-                status='OPEN'
+                raised_by=request.user,
+                status=EscrowDispute.DisputeStatus.OPEN
             )
-            escrow.status = 'DISPUTED'
+            escrow.status = EscrowContract.Status.DISPUTED
             escrow.save(update_fields=['status'])
 
         return Response(
@@ -427,19 +457,21 @@ class CancelAndRefundEscrowView(APIView):
         except EscrowContract.DoesNotExist:
             return Response({"detail": "Escrow contract not found."}, status=status.HTTP_404_NOT_FOUND)
 
-        if request.user not in [escrow.buyer, escrow.dealership] and not request.user.is_staff:
+        if request.user not in [escrow.buyer, escrow.seller] and not request.user.is_staff:
             raise PermissionDenied("You do not have permission to cancel this contract.")
 
         allowed_cancel_states = [
-            getattr(EscrowContract.Status, 'DRAFT', 'DRAFT'),
-            getattr(EscrowContract.Status, 'FUNDED', 'FUNDED'),
-            getattr(EscrowContract.Status, 'FAILED', 'FAILED')
+            EscrowContract.Status.PENDING,
+            EscrowContract.Status.ACTIVE,
+            EscrowContract.Status.INSPECTION,
+            EscrowContract.Status.LOGISTICS,
+            EscrowContract.Status.DISPUTED,
         ]
 
         if escrow.status not in allowed_cancel_states:
             raise ValidationError(f"Escrow contract cannot be cancelled in status '{escrow.status}'.")
 
-        serializer = CancelEscrowSerializer(data=request.data)
+        serializer = CancelEscrowSerializer(data=request.data, context={'contract': escrow})
         serializer.is_valid(raise_exception=True)
 
         with transaction.atomic():
@@ -449,16 +481,21 @@ class CancelAndRefundEscrowView(APIView):
                 escrow.vehicle.save()
 
             # Process wallet refund if funds were locked
-            if escrow.status in [getattr(EscrowContract.Status, 'FUNDED', 'FUNDED'), getattr(EscrowContract.Status, 'FAILED', 'FAILED')]:
+            if escrow.status in [
+                EscrowContract.Status.ACTIVE,
+                EscrowContract.Status.INSPECTION,
+                EscrowContract.Status.LOGISTICS,
+                EscrowContract.Status.DISPUTED,
+            ]:
                 WalletTransaction.objects.create(
                     user=escrow.buyer,
                     escrow=escrow,
                     amount=escrow.amount,
-                    transaction_type='REFUND',
-                    description=f"Full refund for cancelled escrow #{escrow.id}. Reason: {serializer.validated_data['cancellation_reason']}"
+                    transaction_type=WalletTransaction.TransactionType.REFUND,
+                    reference=f"CANCEL-{escrow.id}-{uuid.uuid4().hex[:8].upper()}",
                 )
 
-            escrow.status = 'CANCELLED'
+            escrow.status = EscrowContract.Status.CANCELLED
             escrow.save(update_fields=['status'])
 
         return Response(
@@ -483,25 +520,25 @@ class ResolveDisputeAdminView(APIView):
         except EscrowContract.DoesNotExist:
             return Response({"detail": "Escrow contract not found."}, status=status.HTTP_404_NOT_FOUND)
 
-        if escrow.status != 'DISPUTED' or not hasattr(escrow, 'dispute'):
+        if escrow.status != EscrowContract.Status.DISPUTED or not hasattr(escrow, 'dispute'):
             raise ValidationError("This escrow is not currently in an active disputed state.")
 
         serializer = ResolveDisputeSerializer(data=request.data, context={'escrow': escrow})
         serializer.is_valid(raise_exception=True)
 
         outcome = serializer.validated_data['resolution_outcome']
-        notes = serializer.validated_data['resolution_notes']
+        notes = serializer.validated_data.get('arbiter_notes', '')
 
         with transaction.atomic():
             dispute = escrow.dispute
 
-            if outcome == 'REFUND_BUYER_FULL':
+            if outcome == EscrowDispute.ResolutionOutcome.FULL_REFUND_BUYER:
                 buyer_amount = escrow.amount
                 seller_amount = 0
-            elif outcome == 'RELEASE_SELLER_FULL':
+            elif outcome == EscrowDispute.ResolutionOutcome.FULL_PAYOUT_SELLER:
                 buyer_amount = 0
                 seller_amount = escrow.amount
-            elif outcome == 'PARTIAL_REFUND':
+            elif outcome == EscrowDispute.ResolutionOutcome.PARTIAL_REFUND:
                 buyer_amount = serializer.validated_data.get('buyer_refund_amount', 0)
                 seller_amount = serializer.validated_data.get('seller_payout_amount', 0)
 
@@ -510,24 +547,28 @@ class ResolveDisputeAdminView(APIView):
                     user=escrow.buyer,
                     escrow=escrow,
                     amount=buyer_amount,
-                    transaction_type='REFUND',
-                    description=f"Dispute resolution payout for Escrow #{escrow.id}: {notes}"
+                    transaction_type=WalletTransaction.TransactionType.REFUND,
+                    reference=f"DISPUTE-REFUND-{escrow.id}-{uuid.uuid4().hex[:8].upper()}",
                 )
 
             if seller_amount > 0:
                 WalletTransaction.objects.create(
-                    user=escrow.dealership,
+                    user=escrow.seller,
                     escrow=escrow,
                     amount=seller_amount,
-                    transaction_type='PAYOUT',
-                    description=f"Dispute resolution payout for Escrow #{escrow.id}: {notes}"
+                    transaction_type=WalletTransaction.TransactionType.PAYOUT,
+                    reference=f"DISPUTE-PAYOUT-{escrow.id}-{uuid.uuid4().hex[:8].upper()}",
                 )
 
-            dispute.status = 'RESOLVED'
-            dispute.resolution_notes = notes
+            dispute.status = EscrowDispute.DisputeStatus.RESOLVED
+            dispute.resolution_outcome = outcome
+            dispute.buyer_refund_amount = buyer_amount
+            dispute.seller_payout_amount = seller_amount
+            dispute.arbiter_notes = notes
+            dispute.resolved_at = timezone.now()
             dispute.save()
 
-            escrow.status = 'REFUNDED' if buyer_amount == escrow.amount else 'RESOLVED'
+            escrow.status = EscrowContract.Status.CANCELLED if buyer_amount == escrow.amount else EscrowContract.Status.COMPLETED
             escrow.save(update_fields=['status'])
 
             # Relist vehicle if full refund was issued

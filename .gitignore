@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Django/local runtime
+db.sqlite3
+media/
+staticfiles/
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Environment files
+.env
+.env.*
+
+# Node/frontend
+node_modules/
+dist/
+build/
+
+# Tooling and OS noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

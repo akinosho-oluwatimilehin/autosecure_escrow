@@ -20,10 +20,13 @@ ALLOWED_HOSTS = ['*']
 # =============================================================================
 
 INSTALLED_APPS = [
-    # Django Core Apps
+    # Third-Party Apps
     'corsheaders',
     'rest_framework',
-    'core',
+    'rest_framework_simplejwt',
+    'drf_spectacular',
+
+    # Django Core Apps
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -31,22 +34,15 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
-    # Third-Party Apps
-    'rest_framework',
-    'rest_framework_simplejwt',
-    'drf_spectacular',
-    'corsheaders',
-
     # Local Apps
     'core',
 ]
 
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',  # Must be near the top for CORS
-    'django.middleware.common.commonMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.common.CommonMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',

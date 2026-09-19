@@ -28,7 +28,7 @@ class IsContractParticipant(permissions.BasePermission):
     """
     def has_object_permission(self, request, view, obj):
         user = request.user
-        return user in [obj.buyer, obj.dealership, obj.repair_shop]
+        return user in [obj.buyer, obj.seller, obj.inspector, obj.carrier]
 
 class IsLogisticsUser(permissions.BasePermission):
 
