@@ -4,39 +4,63 @@ import {
   ArrowRight,
   CarFront,
   CheckCircle2,
-  FileCheck,
+  FileText,
   ShieldCheck,
-  Sparkles,
   Truck,
+  Wallet,
+  CircleDashed,
+  HandCoins,
+  LockKeyhole,
 } from 'lucide-react';
 
-const featureCards = [
+const roleCards = [
   {
-    icon: ShieldCheck,
-    title: 'Escrow protected',
-    description: 'Funds stay secure until the vehicle meets the agreed condition and handoff requirements.',
+    id: 'buyer',
+    title: 'Buyer',
+    description: 'Funds lock on offer acceptance. Release is automatic — no manual handoff, no chasing.',
   },
   {
-    icon: FileCheck,
-    title: 'Inspection verified',
-    description: 'Repair shops document the car’s health before funds are released, reducing surprises and disputes.',
+    id: 'seller',
+    title: 'Seller',
+    description: 'List, verify the deposit, and ship to a confirmed address. Payout lands on clearance.',
   },
   {
-    icon: Truck,
-    title: 'Carrier tracking',
-    description: 'Track delivery milestones in real time with logistics updates and clear handoff checkpoints.',
+    id: 'inspector',
+    title: 'Inspector',
+    description: 'On-site technical report gates the vault — condition must match the listing exactly.',
   },
   {
-    icon: CarFront,
-    title: 'Marketplace ready',
-    description: 'List verified vehicles, match buyers, and manage every handoff from one modern workflow.',
+    id: 'carrier',
+    title: 'Carrier',
+    description: 'Live shipment tracking provides the final proof before the key turns and funds move.',
   },
 ];
 
-const steps = [
-  'Create a secure escrow agreement',
-  'Inspect the vehicle before release',
-  'Track delivery and settle funds',
+const flowSteps = [
+  {
+    number: '01',
+    title: 'Deposit locked',
+    description: 'Buyer funds enter segregated escrow the instant the offer is accepted.',
+    icon: Wallet,
+  },
+  {
+    number: '02',
+    title: 'Inspection',
+    description: 'A verified inspector confirms VIN, condition, and title authenticity on site.',
+    icon: ShieldCheck,
+  },
+  {
+    number: '03',
+    title: 'Shipping',
+    description: 'GPS-tracked transport with photo proof at pickup and drop-off keeps every handoff visible.',
+    icon: Truck,
+  },
+  {
+    number: '04',
+    title: 'Payout',
+    description: 'The vault releases to the seller once the key verifies and title transfers.',
+    icon: HandCoins,
+  },
 ];
 
 export default function LandingPage() {
@@ -44,156 +68,127 @@ export default function LandingPage() {
     <div className="landing-shell">
       <header className="landing-header">
         <div className="brand" aria-label="AutoSecure Escrow home">
-          <span className="brand-mark"><ShieldCheck size={18} /></span>
-          <span>AutoSecure Escrow</span>
+          <span className="brand-mark">A</span>
+          <span className="brand-name">AutoSecure</span>
         </div>
 
-        <nav className="landing-nav" aria-label="Main navigation">
-          <a href="#features">Features</a>
-          <a href="#workflow">Workflow</a>
-          <a href="#security">Security</a>
-        </nav>
-
-        <div className="landing-actions">
-          <Link to="/login" className="button ghost">Sign in</Link>
-          <Link to="/register" className="button primary">Create account</Link>
-        </div>
+        <div className="nav-tag">ESCROW</div>
       </header>
 
       <main className="landing-page">
         <section className="hero-section">
           <div className="hero-copy">
-            <div className="eyebrow-wrap">
-              <Sparkles size={16} />
-              Trusted automotive escrow for modern buyers and sellers
-            </div>
+            <div className="eyebrow-wrap">PEER-TO-PEER VEHICLE ESCROW</div>
 
             <h1>
-              Secure every vehicle deal
-              <span className="hero-highlight"> from listing to final delivery.</span>
+              The vault closes on
+              <span className="hero-break"> the key the moment</span>
+              <span className="hero-break"> every milestone clicks.</span>
             </h1>
+
             <p>
-              AutoSecure Escrow helps dealers, buyers, repair shops, and logistics teams manage vehicle transactions
-              with safer payments, inspection accountability, and transparent status updates.
+              Buyer funds lock in escrow and release only when verification, inspection, and shipment each confirm.
+              No trust assumptions — just proof.
             </p>
 
-            <div className="hero-actions">
-              <Link to="/register" className="button primary large">
-                Start now <ArrowRight size={18} />
-              </Link>
-              <Link to="/marketplace" className="button secondary large">
-                Explore marketplace
-              </Link>
-            </div>
+            <div className="milestone-card">
+              <div className="milestone-header">
+                <span>ESCROW MILESTONES · VIN1HGCM82633A</span>
+                <span>3 of 4 locked</span>
+              </div>
 
-            <div className="hero-metrics">
-              <div>
-                <strong>2,500+</strong>
-                <span>Protected transactions</span>
-              </div>
-              <div>
-                <strong>99.8%</strong>
-                <span>On-time delivery</span>
-              </div>
-              <div>
-                <strong>24/7</strong>
-                <span>Escrow monitoring</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="hero-visual" aria-label="Escrow workflow overview">
-            <div className="glow-orb orb-one" />
-            <div className="glow-orb orb-two" />
-
-            <div className="visual-card main-card">
-              <div className="visual-topline">
-                <span className="dot green" />
-                Active escrow
-              </div>
-              <h3>2022 Toyota Camry</h3>
-              <div className="price-row">
-                <span>Escrow value</span>
-                <strong>$18,000</strong>
-              </div>
-              <div className="progress-row">
-                <div className="progress-line">
-                  <span style={{ width: '72%' }} />
+              <div className="milestone-track" aria-label="Escrow progress">
+                <div className="milestone-step active">
+                  <div className="step-dot active">1</div>
+                  <span>Deposit</span>
                 </div>
-                <span>72% complete</span>
+                <div className="milestone-step active">
+                  <div className="step-dot active">2</div>
+                  <span>Inspect</span>
+                </div>
+                <div className="milestone-step active">
+                  <div className="step-dot active">3</div>
+                  <span>Ship</span>
+                </div>
+                <div className="milestone-step">
+                  <div className="step-dot">4</div>
+                  <span>Payout</span>
+                </div>
               </div>
-            </div>
 
-            <div className="floating-card card-one">
-              <CheckCircle2 size={18} />
-              <div>
-                <strong>Inspection approved</strong>
-                <span>passed by repair team</span>
+              <div className="milestone-line-row">
+                <span className="line-fill" />
               </div>
-            </div>
 
-            <div className="floating-card card-two">
-              <Truck size={18} />
-              <div>
-                <strong>In transit</strong>
-                <span>Tracking ID: TRK-1B8A511F</span>
+              <div className="locked-panel">
+                <div className="locked-number">04</div>
+                <div className="locked-copy">
+                  <strong>Auction '21 Camry LE · $24,000</strong>
+                  <span>Locked by escrow · releases on title transfer</span>
+                </div>
               </div>
             </div>
           </div>
         </section>
 
-        <section className="trust-bar" id="security">
-          <span>Trusted by private buyers</span>
-          <span>Dealer networks</span>
-          <span>Repair shops</span>
-          <span>Carrier partners</span>
+        <section className="roles-grid">
+          {roleCards.map(({ id, title, description }) => (
+            <article key={id} className="role-card">
+              <div className="role-title">{title}</div>
+              <p>{description}</p>
+            </article>
+          ))}
         </section>
 
-        <section className="feature-section" id="features">
-          <div className="section-heading">
-            <p className="eyebrow">Why AutoSecure</p>
-            <h2>Built to reduce risk at every handoff.</h2>
-          </div>
+        <section className="flow-section">
+          <h2>The milestone flow</h2>
 
-          <div className="feature-grid">
-            {featureCards.map(({ icon: Icon, title, description }) => (
-              <article key={title} className="feature-card">
-                <span className="feature-icon">
-                  <Icon size={18} />
-                </span>
-                <h3>{title}</h3>
-                <p>{description}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="workflow-section" id="workflow">
-          <div className="section-heading narrow">
-            <p className="eyebrow">How it works</p>
-            <h2>A simple flow that keeps everyone aligned.</h2>
-          </div>
-
-          <div className="workflow-grid">
-            {steps.map((step, index) => (
-              <div key={step} className="workflow-step">
-                <span className="step-index">0{index + 1}</span>
-                <h3>{step}</h3>
+          <div className="flow-list">
+            {flowSteps.map(({ number, title, description, icon: Icon }) => (
+              <div key={number} className="flow-item">
+                <div className="flow-node-wrap">
+                  <span className="flow-node">{number}</span>
+                  <span className="flow-connector" />
+                </div>
+                <div className="flow-copy">
+                  <h3>{title}</h3>
+                  <p>{description}</p>
+                  <div className="mini-badges">
+                    <span className="mini-badge"><Icon size={14} /></span>
+                    <span className="mini-badge"><Truck size={14} /></span>
+                    <span className="mini-badge"><FileText size={14} /></span>
+                    <span className="mini-badge"><CheckCircle2 size={14} /></span>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
         </section>
 
         <section className="cta-panel">
-          <div>
-            <p className="eyebrow">Ready to begin?</p>
-            <h2>Launch a safer vehicle transaction today.</h2>
-          </div>
+          <h3>Lock the sale. Prove the handoff.</h3>
+          <p>Start a secure transaction and watch funds move only when the milestones click.</p>
+
           <div className="cta-actions">
-            <Link to="/register" className="button primary">Get started</Link>
-            <Link to="/login" className="button ghost">Log in</Link>
+            <Link to="/register" className="primary-btn">
+              Start a secure transaction
+            </Link>
+            <Link to="/login" className="secondary-btn">
+              See a live escrow timeline
+            </Link>
           </div>
         </section>
+
+        <footer className="landing-footer">
+          <span>AutoSecure Escrow</span>
+          <div className="tiny-icons">
+            <span className="tiny-icon"><CarFront size={16} /></span>
+            <span className="tiny-icon"><LockKeyhole size={16} /></span>
+            <span className="tiny-icon"><Truck size={16} /></span>
+            <span className="tiny-icon"><CheckCircle2 size={16} /></span>
+          </div>
+          <span>Funds held in segregated custody</span>
+        </footer>
       </main>
     </div>
   );

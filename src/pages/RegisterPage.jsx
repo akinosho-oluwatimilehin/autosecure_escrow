@@ -1,25 +1,76 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { UserPlus } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { ArrowRight, Check, Lock, Mail, ShieldCheck, User } from 'lucide-react';
 import { authService } from '../services/apiServices';
 import FormMessage from '../components/FormMessage';
 
-const roles = [
-  ['BUYER', 'Buyer'],
-  ['DEALERSHIP', 'Dealership'],
-  ['REPAIR_SHOP', 'Repair shop'],
-  ['LOGISTICS', 'Logistics carrier'],
+const roleOptions = [
+  {
+    value: 'BUYER',
+    label: 'Buyer',
+    description: 'Purchase vehicles with escrowed funds',
+  },
+  {
+    value: 'DEALERSHIP',
+    label: 'Seller',
+    description: 'List vehicles and receive payouts',
+  },
+  {
+    value: 'REPAIR_SHOP',
+    label: 'Inspector',
+    description: 'Verify condition on site',
+  },
+  {
+    value: 'LOGISTICS',
+    label: 'Carrier',
+    description: 'Transport with live tracking',
+  },
 ];
+
+export function ConfirmEmailPage() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const email = location.state?.email || 'example@gmail.com';
+
+  return (
+    <main className="auth-shell auth-shell--dark">
+      <header className="auth-header">
+        <div className="brand" aria-label="AutoSecure Escrow home">
+          <span className="brand-mark">A</span>
+          <span className="brand-name">AutoSecure</span>
+        </div>
+
+        <div className="nav-tag">ESCROW</div>
+      </header>
+
+      <div className="auth-stage">
+        <div className="auth-card auth-card--success">
+          <div className="success-check"><Check size={28} /></div>
+
+          <div className="auth-title-wrap auth-title-wrap--center">
+            <h1>Confirm your email</h1>
+          </div>
+
+          <p className="auth-confirm-copy">
+            We sent a confirmation link to <strong>{email}</strong>. Click it to activate your account, then sign in.
+          </p>
+
+          <button type="button" className="auth-primary-button" onClick={() => navigate('/login')}>
+            Back to sign in
+          </button>
+        </div>
+      </div>
+    </main>
+  );
+}
 
 export default function RegisterPage() {
   const navigate = useNavigate();
   const [form, setForm] = useState({
-    username: '',
+    fullName: '',
     email: '',
     password: '',
     role: 'BUYER',
-    company_name: '',
-    phone: '',
   });
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -35,8 +86,21 @@ export default function RegisterPage() {
     setError('');
 
     try {
-      await authService.register(form);
-      navigate('/login', { replace: true });
+      const normalizedName = form.fullName.trim();
+      const [first_name, ...rest] = normalizedName.split(' ');
+      const last_name = rest.join(' ');
+      const usernameBase = (normalizedName || form.email.split('@')[0]).replace(/\s+/g, '_');
+
+      await authService.register({
+        username: usernameBase,
+        email: form.email,
+        password: form.password,
+        role: form.role,
+        first_name: first_name || '',
+        last_name: last_name || '',
+      });
+
+      navigate('/confirm-email', { replace: true, state: { email: form.email } });
     } catch (err) {
       const data = err.response?.data;
       setError(typeof data === 'string' ? data : JSON.stringify(data || 'Registration failed.'));
@@ -46,44 +110,121 @@ export default function RegisterPage() {
   };
 
   return (
-    <main className="auth-page">
-      <section className="panel auth-panel">
-        <h1 className="page-title">Create account</h1>
-        <p className="page-subtitle">Choose the role that matches how you use AutoSecure.</p>
-        <form className="form-grid" onSubmit={handleSubmit} style={{ marginTop: 18 }}>
-          <FormMessage error={error} />
-          <div className="field">
-            <label htmlFor="username">Username</label>
-            <input id="username" name="username" value={form.username} onChange={handleChange} required />
+    <main className="auth-shell auth-shell--dark">
+      <header className="auth-header">
+        <div className="brand" aria-label="AutoSecure Escrow home">
+          <span className="brand-mark">A</span>
+          <span className="brand-name">AutoSecure</span>
+        </div>
+
+        <div className="nav-tag">ESCROW</div>
+      </header>
+
+      <div className="auth-stage">
+        <div className="auth-card auth-card--large">
+          <div className="auth-mode-toggle">
+            <button type="button" className="auth-mode-button active">
+              Sign up
+            </button>
+            <button type="button" className="auth-mode-button" onClick={() => navigate('/login')}>
+              Sign in
+            </button>
           </div>
-          <div className="field">
-            <label htmlFor="email">Email</label>
-            <input id="email" name="email" type="email" value={form.email} onChange={handleChange} />
+
+          <div className="auth-title-wrap auth-title-wrap--center">
+            <span className="auth-kicker">CREATE YOUR ACCOUNT</span>
+            <h1>Join the escrow pipeline.</h1>
           </div>
-          <div className="field">
-            <label htmlFor="password">Password</label>
-            <input id="password" name="password" type="password" minLength="8" value={form.password} onChange={handleChange} required />
+
+          <form className="auth-form" onSubmit={handleSubmit}>
+            <FormMessage error={error} />
+
+            <div className="field field--light">
+              <label htmlFor="fullName">FULL NAME</label>
+              <div className="input-wrap">
+                <User size={16} />
+                <input
+                  id="fullName"
+                  name="fullName"
+                  value={form.fullName}
+                  onChange={handleChange}
+                  placeholder="Ada Lovelace"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="field field--light">
+              <label htmlFor="email">EMAIL</label>
+              <div className="input-wrap">
+                <Mail size={16} />
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  value={form.email}
+                  onChange={handleChange}
+                  placeholder="you@example.com"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="field field--light">
+              <label htmlFor="password">PASSWORD</label>
+              <div className="input-wrap">
+                <Lock size={16} />
+                <input
+                  id="password"
+                  name="password"
+                  type="password"
+                  value={form.password}
+                  onChange={handleChange}
+                  placeholder="At least 6 characters"
+                  minLength={6}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="field field--light field--role">
+              <label>YOUR ROLE</label>
+              <div className="role-grid">
+                {roleOptions.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    className={`role-card ${form.role === option.value ? 'selected' : ''}`}
+                    onClick={() => setForm((current) => ({ ...current, role: option.value }))}
+                  >
+                    <span>{option.label}</span>
+                    <small>{option.description}</small>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <button className="auth-primary-button" type="submit" disabled={submitting}>
+              {submitting ? 'Creating...' : 'Create account'}
+            </button>
+
+            <div className="auth-divider"><span>OR</span></div>
+
+            <button type="button" className="auth-secondary-button">
+              Continue with Google
+            </button>
+          </form>
+
+          <p className="auth-footnote">Funds stay in segregated custody from the first deposit to the final payout.</p>
+
+          <div className="auth-social-row">
+            <span className="tiny-icon"><ArrowRight size={16} /></span>
+            <span className="tiny-icon"><ShieldCheck size={16} /></span>
+            <span className="tiny-icon"><Check size={16} /></span>
+            <span className="tiny-icon"><Mail size={16} /></span>
           </div>
-          <div className="field">
-            <label htmlFor="role">Role</label>
-            <select id="role" name="role" value={form.role} onChange={handleChange}>
-              {roles.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-            </select>
-          </div>
-          <div className="field">
-            <label htmlFor="company_name">Company name</label>
-            <input id="company_name" name="company_name" value={form.company_name} onChange={handleChange} />
-          </div>
-          <div className="field">
-            <label htmlFor="phone">Phone</label>
-            <input id="phone" name="phone" value={form.phone} onChange={handleChange} />
-          </div>
-          <button className="button primary" type="submit" disabled={submitting}>
-            <UserPlus size={17} /> {submitting ? 'Creating...' : 'Create account'}
-          </button>
-          <Link to="/login" className="button ghost">Back to sign in</Link>
-        </form>
-      </section>
+        </div>
+      </div>
     </main>
   );
 }

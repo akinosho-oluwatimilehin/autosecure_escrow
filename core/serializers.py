@@ -1,3 +1,5 @@
+import re
+
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from .models import (
@@ -22,6 +24,12 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         return token
 
     def validate(self, attrs):
+        username_or_email = attrs.get('username', '').strip()
+        if username_or_email and '@' in username_or_email:
+            user_by_email = User.objects.filter(email__iexact=username_or_email).first()
+            if user_by_email:
+                attrs['username'] = user_by_email.username
+
         data = super().validate(attrs)
 
         # Return user details alongside access/refresh tokens in response body
@@ -39,15 +47,59 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(max_length=150, required=True)
     password = serializers.CharField(write_only=True, min_length=8)
 
     class Meta:
         model = User
         fields = ['id', 'username', 'email', 'password', 'first_name', 'last_name', 'role', 'phone', 'company_name', 'address']
 
+    def validate_username(self, value):
+        if not value:
+            return value
+
+        cleaned = re.sub(r'\s+', '_', value.strip())
+        cleaned = re.sub(r'[^A-Za-z0-9._@+-]', '', cleaned)
+        cleaned = cleaned.strip('._-')
+
+        if not cleaned:
+            raise serializers.ValidationError('Username must include at least one letter or number.')
+
+        return cleaned
+
+    def _generate_username(self, username, email):
+        base = (username or email or 'user').strip()
+        base = re.sub(r'\s+', '_', base)
+        base = re.sub(r'[^A-Za-z0-9._@+-]', '', base)
+
+        if '@' in base:
+            base = base.split('@', 1)[0]
+
+        if not base:
+            base = (email or 'user').split('@', 1)[0].strip()
+            base = re.sub(r'\s+', '_', base)
+            base = re.sub(r'[^A-Za-z0-9._@+-]', '', base)
+
+        if not base:
+            base = 'user'
+        base = base[:30].strip('._-') or 'user'
+        candidate = base
+        counter = 1
+
+        while User.objects.filter(username__iexact=candidate).exists():
+            candidate = f'{base}{counter}'
+            counter += 1
+
+        return candidate
+
     def create(self, validated_data):
+        username = self._generate_username(
+            validated_data.get('username', ''),
+            validated_data.get('email', ''),
+        )
+
         user = User.objects.create_user(
-            username=validated_data['username'],
+            username=username,
             email=validated_data.get('email', ''),
             password=validated_data['password'],
             first_name=validated_data.get('first_name', ''),

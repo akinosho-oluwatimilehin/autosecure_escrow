@@ -12,6 +12,41 @@ class RootUrlTests(TestCase):
         self.assertIn('AutoSecure Escrow', response.content.decode())
 
 
+class AuthFlowTests(APITestCase):
+    def test_register_sanitizes_full_name_and_stores_role(self):
+        response = self.client.post('/api/auth/register/', {
+            'username': 'Ada Lovelace',
+            'email': 'ada@example.com',
+            'password': 'pass1234',
+            'role': 'BUYER',
+            'first_name': 'Ada',
+            'last_name': 'Lovelace',
+        }, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        user = User.objects.get(email='ada@example.com')
+        self.assertEqual(user.role, User.Role.BUYER)
+        self.assertNotIn(' ', user.username)
+        self.assertTrue(user.check_password('pass1234'))
+
+    def test_login_accepts_email_as_username(self):
+        user = User.objects.create_user(
+            username='ada_lovelace',
+            email='ada@example.com',
+            password='pass1234',
+            role=User.Role.BUYER,
+        )
+
+        response = self.client.post('/api/auth/login/', {
+            'username': 'ada@example.com',
+            'password': 'pass1234',
+        }, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['user']['role'], User.Role.BUYER)
+        self.assertEqual(response.data['user']['email'], user.email)
+
+
 class EscrowLifecycleApiTests(APITestCase):
     def setUp(self):
         self.buyer = User.objects.create_user(
