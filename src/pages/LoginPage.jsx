@@ -29,7 +29,11 @@ export default function LoginPage() {
       });
       navigate(location.state?.from?.pathname || '/dashboard', { replace: true });
     } catch (err) {
-      setError(err.response?.data?.detail || 'Login failed. Check your email and password.');
+      if (!err.response) {
+        setError('Cannot connect to the backend server. Please make sure the Django server is running (python manage.py runserver).');
+      } else {
+        setError(err.response?.data?.detail || 'Login failed. Check your email and password.');
+      }
     } finally {
       setSubmitting(false);
     }
@@ -91,7 +95,7 @@ export default function LoginPage() {
                   type="password"
                   value={form.password}
                   onChange={handleChange}
-                  placeholder="At least 6 characters"
+                  placeholder="At least 8 characters"
                   required
                 />
               </div>

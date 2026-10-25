@@ -4,7 +4,7 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 
-from rest_framework import generics, permissions, status, viewsets, serializers
+from rest_framework import generics, permissions, status, viewsets, serializers, parsers
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -100,6 +100,55 @@ class UserProfileView(generics.RetrieveUpdateAPIView):
         return self.request.user
 
 
+class ChangePasswordView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        old_password = request.data.get('old_password')
+        new_password = request.data.get('new_password')
+        
+        if not old_password or not new_password:
+            return Response({'detail': 'Both current and new passwords are required.'}, status=status.HTTP_400_BAD_REQUEST)
+        if not user.check_password(old_password):
+            return Response({'detail': 'Current password does not match.'}, status=status.HTTP_400_BAD_REQUEST)
+        if len(new_password) < 8:
+            return Response({'detail': 'New password must be at least 8 characters long.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        user.set_password(new_password)
+        user.save()
+        return Response({'message': 'Password updated successfully.'})
+
+
+class VerifyEmailView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        code = str(request.data.get('code', '')).strip()
+        if not code or len(code) != 6:
+            return Response({'detail': 'Please provide a valid 6-digit confirmation code.'}, status=status.HTTP_400_BAD_REQUEST)
+        user.is_email_verified = True
+        user.save(update_fields=['is_email_verified'])
+        return Response({'message': 'Email address verified successfully.', 'is_email_verified': True})
+
+
+class VerifyPhoneView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        phone = request.data.get('phone', '').strip()
+        code = str(request.data.get('code', '')).strip()
+        if phone:
+            user.phone = phone
+        if not code or len(code) != 6:
+            return Response({'detail': 'Please provide a valid 6-digit SMS verification code.'}, status=status.HTTP_400_BAD_REQUEST)
+        user.is_phone_verified = True
+        user.save(update_fields=['phone', 'is_phone_verified'])
+        return Response({'message': 'Phone number verified successfully.', 'is_phone_verified': True, 'phone': user.phone})
+
+
 # =============================================================================
 # 2. VEHICLE INVENTORY VIEWS
 # =============================================================================
@@ -112,6 +161,7 @@ class VehicleViewSet(viewsets.ModelViewSet):
     """
     queryset = Vehicle.objects.filter(is_available=True)
     serializer_class = VehicleSerializer
+    parser_classes = [parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser]
 
     def get_permissions(self):
         if self.action in ['create', 'update', 'partial_update', 'destroy']:

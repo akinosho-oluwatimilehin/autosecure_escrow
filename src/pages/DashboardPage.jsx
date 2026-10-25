@@ -28,7 +28,7 @@ const roleCopy = {
     title: 'Dealership dashboard',
     subtitle: 'Track listings, active deals, and delivery milestones from one place.',
     actionLabel: 'List a vehicle',
-    actionPath: '/marketplace',
+    actionPath: '/seller',
   },
   REPAIR_SHOP: {
     title: 'Inspection dashboard',
@@ -195,8 +195,8 @@ export default function DashboardPage() {
               <section className="panel">
                 <div className="actions" style={{ justifyContent: 'space-between' }}>
                   <h2 className="panel-title" style={{ margin: 0 }}>Vehicle listings</h2>
-                  <Link to="/marketplace" className="button secondary" type="button">
-                    <CarFront size={17} /> Manage inventory
+                  <Link to="/seller" className="button secondary" type="button">
+                    <CarFront size={17} /> Manage inventory & photos
                   </Link>
                 </div>
                 {vehicles.length === 0 ? (

@@ -17,6 +17,8 @@ class User(AbstractUser):
     phone = models.CharField(max_length=20, blank=True, null=True)
     company_name = models.CharField(max_length=255, blank=True, null=True, help_text="Registered business name for Dealership, Repair Shop, or Carrier")
     address = models.TextField(blank=True, null=True, help_text="Physical office/lot address")
+    is_email_verified = models.BooleanField(default=False)
+    is_phone_verified = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.username} ({self.get_role_display()})"
@@ -32,6 +34,9 @@ class Vehicle(models.Model):
     price = models.DecimalField(max_digits=12, decimal_places=2)
     transmission = models.CharField(max_length=50)
     description = models.TextField(blank=True)
+    image1 = models.ImageField(upload_to='vehicles/', null=True, blank=True)
+    image2 = models.ImageField(upload_to='vehicles/', null=True, blank=True)
+    image3 = models.ImageField(upload_to='vehicles/', null=True, blank=True)
     is_available = models.BooleanField(default=True)  # <-- Add this field
     created_at = models.DateTimeField(auto_now_add=True)
 

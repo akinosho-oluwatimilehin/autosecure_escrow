@@ -64,6 +64,14 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const updateUser = (updatedUserData) => {
+    setUser((prev) => {
+      const merged = { ...prev, ...updatedUserData };
+      tokenService.setUser(merged);
+      return merged;
+    });
+  };
+
   const hasRole = (allowedRoles) => {
     if (!user || !user.role) return false;
     if (Array.isArray(allowedRoles)) {
@@ -80,6 +88,7 @@ export const AuthProvider = ({ children }) => {
     hasRole,
     login,
     logout,
+    updateUser,
   };
 
   return (

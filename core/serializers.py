@@ -42,6 +42,9 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             'last_name': self.user.last_name,
             'phone': self.user.phone,
             'company_name': self.user.company_name,
+            'address': self.user.address,
+            'is_email_verified': getattr(self.user, 'is_email_verified', False),
+            'is_phone_verified': getattr(self.user, 'is_phone_verified', False),
         }
         return data
 
@@ -122,7 +125,7 @@ class UserSerializer(serializers.ModelSerializer):
 class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'role', 'phone', 'company_name', 'address']
+        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'role', 'phone', 'company_name', 'address', 'is_email_verified', 'is_phone_verified']
         read_only_fields = ['id', 'username', 'role']
 
 
@@ -134,6 +137,7 @@ class VehicleSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'seller', 'make', 'model', 'year', 'vin', 
             'mileage', 'price', 'transmission', 'description', 
+            'image1', 'image2', 'image3',
             'is_available', 'created_at'
         ]
         read_only_fields = ['id', 'seller', 'created_at']

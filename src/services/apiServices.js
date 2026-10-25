@@ -20,11 +20,31 @@ export const authService = {
 
   logout: () => {
     tokenService.clearAuth();
-    window.location.href = '/login';
+    window.location.href = '/';
   },
 
   getProfile: async () => {
     const response = await apiClient.get('/auth/profile/');
+    return response.data;
+  },
+
+  updateProfile: async (profileData) => {
+    const response = await apiClient.patch('/auth/profile/', profileData);
+    return response.data;
+  },
+
+  changePassword: async (passwordData) => {
+    const response = await apiClient.post('/auth/change-password/', passwordData);
+    return response.data;
+  },
+
+  verifyEmail: async (code) => {
+    const response = await apiClient.post('/auth/verify-email/', { code });
+    return response.data;
+  },
+
+  verifyPhone: async (payload) => {
+    const response = await apiClient.post('/auth/verify-phone/', payload);
     return response.data;
   },
 };
@@ -44,7 +64,9 @@ export const vehicleService = {
   },
 
   createVehicle: async (vehicleData) => {
-    const response = await apiClient.post('/vehicles/', vehicleData);
+    const isFormData = typeof FormData !== 'undefined' && vehicleData instanceof FormData;
+    const config = isFormData ? { headers: { 'Content-Type': 'multipart/form-data' } } : {};
+    const response = await apiClient.post('/vehicles/', vehicleData, config);
     return response.data;
   },
 };

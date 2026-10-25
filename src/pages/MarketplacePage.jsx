@@ -84,37 +84,16 @@ export default function MarketplacePage() {
       <div className="stack">
         <FormMessage error={error} success={message} />
         {user?.role === 'DEALERSHIP' && (
-          <section className="panel">
-            <h2 className="panel-title">Create vehicle listing</h2>
-            <form className="form-grid" onSubmit={createVehicle}>
-              <div className="grid three">
-                {['make', 'model', 'year'].map((name) => (
-                  <div className="field" key={name}>
-                    <label htmlFor={name}>{name.replace('_', ' ')}</label>
-                    <input id={name} name={name} value={vehicleForm[name]} onChange={handleChange} required />
-                  </div>
-                ))}
-              </div>
-              <div className="grid three">
-                <div className="field">
-                  <label htmlFor="vin">VIN</label>
-                  <input id="vin" name="vin" maxLength="17" value={vehicleForm.vin} onChange={handleChange} required />
-                </div>
-                <div className="field">
-                  <label htmlFor="mileage">Mileage</label>
-                  <input id="mileage" name="mileage" type="number" value={vehicleForm.mileage} onChange={handleChange} required />
-                </div>
-                <div className="field">
-                  <label htmlFor="price">Price</label>
-                  <input id="price" name="price" type="number" step="0.01" value={vehicleForm.price} onChange={handleChange} required />
-                </div>
-              </div>
-              <div className="field">
-                <label htmlFor="description">Description</label>
-                <textarea id="description" name="description" value={vehicleForm.description} onChange={handleChange} />
-              </div>
-              <button className="button primary" type="submit"><Plus size={17} /> Create listing</button>
-            </form>
+          <section className="panel actions" style={{ justifyContent: 'space-between' }}>
+            <div>
+              <h2 className="panel-title" style={{ margin: 0 }}>Dealership Inventory & Listings</h2>
+              <p className="meta" style={{ margin: '4px 0 0' }}>
+                Upload vehicle listings with mandatory multi-photo inspection verification.
+              </p>
+            </div>
+            <a href="/seller" className="button primary">
+              <Plus size={17} /> Go to Seller Hub & List Vehicle
+            </a>
           </section>
         )}
 
@@ -130,23 +109,38 @@ export default function MarketplacePage() {
           <div className="panel empty-state">No available vehicles.</div>
         ) : (
           <div className="grid three">
-            {vehicles.map((vehicle) => (
-              <article className="item-card stack" key={vehicle.id}>
-                <div className="actions" style={{ justifyContent: 'space-between' }}>
-                  <strong>{vehicle.year} {vehicle.make} {vehicle.model}</strong>
-                  <span className="status-pill">Available</span>
-                </div>
-                <div className="meta">VIN: {vehicle.vin}</div>
-                <div className="meta">Mileage: {vehicle.mileage}</div>
-                <div><strong>NGN {vehicle.price}</strong></div>
-                <p className="meta">{vehicle.description || 'No description provided.'}</p>
-                {user?.role === 'BUYER' && (
-                  <button className="button primary" type="button" onClick={() => createEscrow(vehicle)}>
-                    <ShieldCheck size={17} /> Open escrow
-                  </button>
-                )}
-              </article>
-            ))}
+            {vehicles.map((vehicle) => {
+              const photos = [vehicle.image1, vehicle.image2, vehicle.image3].filter(Boolean);
+              return (
+                <article className="item-card stack" key={vehicle.id}>
+                  {photos.length > 0 && (
+                    <div className="vehicle-card-images">
+                      {photos.slice(0, 2).map((img, i) => (
+                        <img
+                          key={i}
+                          src={img.startsWith('http') ? img : img.startsWith('/') ? img : `/${img}`}
+                          alt={`${vehicle.year} ${vehicle.make} photo ${i + 1}`}
+                          className="vehicle-card-image"
+                        />
+                      ))}
+                    </div>
+                  )}
+                  <div className="actions" style={{ justifyContent: 'space-between' }}>
+                    <strong>{vehicle.year} {vehicle.make} {vehicle.model}</strong>
+                    <span className="status-pill">Available</span>
+                  </div>
+                  <div className="meta">VIN: {vehicle.vin}</div>
+                  <div className="meta">Mileage: {vehicle.mileage?.toLocaleString()} km</div>
+                  <div><strong>NGN {Number(vehicle.price).toLocaleString()}</strong></div>
+                  <p className="meta">{vehicle.description || 'No description provided.'}</p>
+                  {user?.role === 'BUYER' && (
+                    <button className="button primary" type="button" onClick={() => createEscrow(vehicle)}>
+                      <ShieldCheck size={17} /> Open escrow
+                    </button>
+                  )}
+                </article>
+              );
+            })}
           </div>
         )}
       </div>

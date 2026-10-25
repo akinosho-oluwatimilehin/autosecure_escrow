@@ -1,37 +1,38 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import {
-  ArrowRight,
-  CarFront,
-  CheckCircle2,
-  FileText,
-  ShieldCheck,
-  Truck,
-  Wallet,
-  CircleDashed,
-  HandCoins,
-  LockKeyhole,
-} from 'lucide-react';
+
+const highlightFeatures = [
+  {
+    badge: 'F',
+    title: 'Funds locked',
+    description: 'Deposits held in segregated custody until each milestone clears.',
+  },
+  {
+    badge: 'VI',
+    title: 'Verified inspection',
+    description: 'On-site tech sign-off with timestamped photo evidence.',
+  },
+];
 
 const roleCards = [
   {
     id: 'buyer',
-    title: 'Buyer',
+    title: 'BUYER',
     description: 'Funds lock on offer acceptance. Release is automatic — no manual handoff, no chasing.',
   },
   {
     id: 'seller',
-    title: 'Seller',
+    title: 'SELLER',
     description: 'List, verify the deposit, and ship to a confirmed address. Payout lands on clearance.',
   },
   {
     id: 'inspector',
-    title: 'Inspector',
+    title: 'INSPECTOR',
     description: 'On-site technical report gates the vault — condition must match the listing exactly.',
   },
   {
     id: 'carrier',
-    title: 'Carrier',
+    title: 'CARRIER',
     description: 'Live shipment tracking provides the final proof before the key turns and funds move.',
   },
 ];
@@ -41,25 +42,21 @@ const flowSteps = [
     number: '01',
     title: 'Deposit locked',
     description: 'Buyer funds enter segregated escrow the instant the offer is accepted.',
-    icon: Wallet,
   },
   {
     number: '02',
     title: 'Inspection',
     description: 'A verified inspector confirms VIN, condition, and title authenticity on site.',
-    icon: ShieldCheck,
   },
   {
     number: '03',
     title: 'Shipping',
-    description: 'GPS-tracked transport with photo proof at pickup and drop-off keeps every handoff visible.',
-    icon: Truck,
+    description: 'GPS-tracked transport with photo proof at pickup and drop-off.',
   },
   {
     number: '04',
     title: 'Payout',
     description: 'The vault releases to the seller once the key verifies and title transfers.',
-    icon: HandCoins,
   },
 ];
 
@@ -67,57 +64,65 @@ export default function LandingPage() {
   return (
     <div className="landing-shell">
       <header className="landing-header">
-        <div className="brand" aria-label="AutoSecure Escrow home">
+        <Link to="/" className="brand" aria-label="AutoSecure Escrow home">
           <span className="brand-mark">A</span>
           <span className="brand-name">AutoSecure</span>
-        </div>
+        </Link>
 
-        <div className="nav-tag">ESCROW</div>
+        <div className="landing-header-right">
+          <span className="nav-tag">ESCROW</span>
+          <Link to="/login" className="nav-signin-btn">
+            Sign In
+          </Link>
+        </div>
       </header>
 
       <main className="landing-page">
+        {/* Hero Section */}
         <section className="hero-section">
           <div className="hero-copy">
             <div className="eyebrow-wrap">PEER-TO-PEER VEHICLE ESCROW</div>
 
             <h1>
-              The vault closes on
-              <span className="hero-break"> the key the moment</span>
-              <span className="hero-break"> every milestone clicks.</span>
+              The vault closes on<br />
+              the key the moment<br />
+              every milestone clicks.
             </h1>
 
             <p>
-              Buyer funds lock in escrow and release only when verification, inspection, and shipment each confirm.
-              No trust assumptions — just proof.
+              Buyer funds lock in escrow and release only when verification, inspection, and
+              shipment each confirm. No trust assumptions — just proof.
             </p>
 
             <div className="milestone-card">
               <div className="milestone-header">
-                <span>ESCROW MILESTONES · VIN1HGCM82633A</span>
-                <span>3 of 4 locked</span>
+                <span>ESCROW MILESTONES · VIN 1HGCM82633A</span>
+                <span className="milestone-status">3 of 4 locked</span>
               </div>
 
               <div className="milestone-track" aria-label="Escrow progress">
                 <div className="milestone-step active">
                   <div className="step-dot active">1</div>
-                  <span>Deposit</span>
+                  <span className="step-name">Deposit</span>
                 </div>
+                <div className="milestone-line active" />
+
                 <div className="milestone-step active">
                   <div className="step-dot active">2</div>
-                  <span>Inspect</span>
+                  <span className="step-name">Inspect</span>
                 </div>
+                <div className="milestone-line active" />
+
                 <div className="milestone-step active">
                   <div className="step-dot active">3</div>
-                  <span>Ship</span>
+                  <span className="step-name">Ship</span>
                 </div>
+                <div className="milestone-line" />
+
                 <div className="milestone-step">
                   <div className="step-dot">4</div>
-                  <span>Payout</span>
+                  <span className="step-name">Payout</span>
                 </div>
-              </div>
-
-              <div className="milestone-line-row">
-                <span className="line-fill" />
               </div>
 
               <div className="locked-panel">
@@ -131,65 +136,88 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section className="roles-grid">
-          {roleCards.map(({ id, title, description }) => (
-            <article key={id} className="role-card">
-              <div className="role-title">{title}</div>
+        {/* Feature Highlights (Funds locked & Verified inspection) */}
+        <section className="features-grid">
+          {highlightFeatures.map(({ badge, title, description }) => (
+            <div key={title} className="feature-card">
+              <div className="feature-badge">{badge}</div>
+              <h3>{title}</h3>
               <p>{description}</p>
-            </article>
+            </div>
           ))}
         </section>
 
+        {/* Four Roles Section */}
+        <section className="roles-section">
+          <h2>Four roles. One locked pipeline.</h2>
+          <p className="roles-subtitle">
+            Each party works their lane; the vault only opens when they line up.
+          </p>
+
+          <div className="roles-grid">
+            {roleCards.map(({ id, title, description }) => (
+              <article key={id} className="role-card">
+                <div className="role-header">
+                  <span className="role-title">{title}</span>
+                  <span className="role-rule" />
+                </div>
+                <p>{description}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        {/* Milestone Flow Timeline */}
         <section className="flow-section">
           <h2>The milestone flow</h2>
 
           <div className="flow-list">
-            {flowSteps.map(({ number, title, description, icon: Icon }) => (
+            {flowSteps.map(({ number, title, description }, index) => (
               <div key={number} className="flow-item">
-                <div className="flow-node-wrap">
+                <div className="flow-node-col">
                   <span className="flow-node">{number}</span>
-                  <span className="flow-connector" />
+                  {index < flowSteps.length - 1 && <span className="flow-connector" />}
                 </div>
                 <div className="flow-copy">
                   <h3>{title}</h3>
                   <p>{description}</p>
-                  <div className="mini-badges">
-                    <span className="mini-badge"><Icon size={14} /></span>
-                    <span className="mini-badge"><Truck size={14} /></span>
-                    <span className="mini-badge"><FileText size={14} /></span>
-                    <span className="mini-badge"><CheckCircle2 size={14} /></span>
-                  </div>
                 </div>
               </div>
             ))}
           </div>
         </section>
 
+        {/* Disputes & Tracking */}
+        <section className="disputes-section">
+          <h2>Disputes &amp; tracking</h2>
+          <p>
+            Every milestone is logged and time-stamped, so a dispute resolves against
+            evidence, not memory. Carriers report in real time; both parties see the same record.
+          </p>
+        </section>
+
+        {/* CTA Panel */}
         <section className="cta-panel">
           <h3>Lock the sale. Prove the handoff.</h3>
           <p>Start a secure transaction and watch funds move only when the milestones click.</p>
 
           <div className="cta-actions">
-            <Link to="/register" className="primary-btn">
+            <Link to="/register" className="cta-primary-btn">
               Start a secure transaction
             </Link>
-            <Link to="/login" className="secondary-btn">
-              See a live escrow timeline
-            </Link>
+            <div className="cta-subtext">
+              New here? You'll create a free account — <Link to="/login">existing users can switch to sign in.</Link>
+            </div>
           </div>
         </section>
 
+        {/* Minimal Footer */}
         <footer className="landing-footer">
           <span>AutoSecure Escrow</span>
-          <div className="tiny-icons">
-            <span className="tiny-icon"><CarFront size={16} /></span>
-            <span className="tiny-icon"><LockKeyhole size={16} /></span>
-            <span className="tiny-icon"><Truck size={16} /></span>
-            <span className="tiny-icon"><CheckCircle2 size={16} /></span>
-          </div>
           <span>Funds held in segregated custody</span>
         </footer>
       </main>
     </div>
   );
 }
+

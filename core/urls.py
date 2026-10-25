@@ -6,6 +6,9 @@ from .views import (
     CustomTokenObtainPairView,
     UserRegistrationView,
     UserProfileView,
+    ChangePasswordView,
+    VerifyEmailView,
+    VerifyPhoneView,
     VehicleViewSet,
     EscrowContractListCreateView,
     EscrowContractDetailView,
@@ -34,6 +37,9 @@ urlpatterns = [
     path('auth/login/', CustomTokenObtainPairView.as_view(), name='auth_login'),
     path('auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('auth/profile/', UserProfileView.as_view(), name='user_profile'),
+    path('auth/change-password/', ChangePasswordView.as_view(), name='change_password'),
+    path('auth/verify-email/', VerifyEmailView.as_view(), name='verify_email'),
+    path('auth/verify-phone/', VerifyPhoneView.as_view(), name='verify_phone'),
 
     # -------------------------------------------------------------------------
     # 2. Vehicle Inventory Endpoints (ModelViewSet Router)

@@ -48,15 +48,15 @@ export function ConfirmEmailPage() {
           <div className="success-check"><Check size={28} /></div>
 
           <div className="auth-title-wrap auth-title-wrap--center">
-            <h1>Confirm your email</h1>
+            <h1>Account created!</h1>
           </div>
 
           <p className="auth-confirm-copy">
-            We sent a confirmation link to <strong>{email}</strong>. Click it to activate your account, then sign in.
+            Your account for <strong>{email}</strong> is ready and active. You can sign in directly with your credentials.
           </p>
 
           <button type="button" className="auth-primary-button" onClick={() => navigate('/login')}>
-            Back to sign in
+            Sign in now
           </button>
         </div>
       </div>
@@ -98,12 +98,31 @@ export default function RegisterPage() {
         role: form.role,
         first_name: first_name || '',
         last_name: last_name || '',
+        company_name: normalizedName,
       });
 
       navigate('/confirm-email', { replace: true, state: { email: form.email } });
     } catch (err) {
-      const data = err.response?.data;
-      setError(typeof data === 'string' ? data : JSON.stringify(data || 'Registration failed.'));
+      if (!err.response) {
+        setError('Cannot connect to the backend server. Please make sure the Django server is running (python manage.py runserver).');
+      } else {
+        const data = err.response?.data;
+        if (typeof data === 'string') {
+          setError(data);
+        } else if (data?.password) {
+          setError(Array.isArray(data.password) ? data.password.join(' ') : data.password);
+        } else if (data?.email) {
+          setError(Array.isArray(data.email) ? data.email.join(' ') : data.email);
+        } else if (data?.username) {
+          setError(Array.isArray(data.username) ? data.username.join(' ') : data.username);
+        } else if (data?.detail) {
+          setError(data.detail);
+        } else if (data?.non_field_errors) {
+          setError(Array.isArray(data.non_field_errors) ? data.non_field_errors.join(' ') : data.non_field_errors);
+        } else {
+          setError(JSON.stringify(data || 'Registration failed.'));
+        }
+      }
     } finally {
       setSubmitting(false);
     }
@@ -140,7 +159,7 @@ export default function RegisterPage() {
             <FormMessage error={error} />
 
             <div className="field field--light">
-              <label htmlFor="fullName">FULL NAME</label>
+              <label htmlFor="fullName">FULL NAME OR COMPANY NAME</label>
               <div className="input-wrap">
                 <User size={16} />
                 <input
@@ -148,7 +167,7 @@ export default function RegisterPage() {
                   name="fullName"
                   value={form.fullName}
                   onChange={handleChange}
-                  placeholder="Ada Lovelace"
+                  placeholder="Adekola Musa/AutoLogistics"
                   required
                 />
               </div>
@@ -180,8 +199,8 @@ export default function RegisterPage() {
                   type="password"
                   value={form.password}
                   onChange={handleChange}
-                  placeholder="At least 6 characters"
-                  minLength={6}
+                  placeholder="At least 8 characters"
+                  minLength={8}
                   required
                 />
               </div>
