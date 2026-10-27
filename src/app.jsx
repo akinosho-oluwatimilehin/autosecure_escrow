@@ -10,7 +10,7 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage, { ConfirmEmailPage } from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
 import MarketplacePage from './pages/MarketplacePage';
-import SellerPortalPage from './pages/SellerPortalPage';
+import DealerPortalPage from './pages/SellerPortalPage';
 import InspectionPortalPage from './pages/InspectionPortalPage';
 import CarrierPortalPage from './pages/CarrierPortalPage';
 import SettingsPage from './pages/SettingsPage';
@@ -36,9 +36,10 @@ function App() {
               <Route path="/settings" element={<SettingsPage />} />
             </Route>
 
-            {/* Role-Restricted Route: Dealerships / Sellers Only */}
+            {/* Role-Restricted Route: Registered Car Dealers Only */}
             <Route element={<ProtectedRoute allowedRoles={['DEALERSHIP']} />}>
-              <Route path="/seller" element={<SellerPortalPage />} />
+              <Route path="/dealer" element={<DealerPortalPage />} />
+              <Route path="/seller" element={<Navigate to="/dealer" replace />} />
             </Route>
 
             {/* Role-Restricted Route: Mechanics / Repair Shops Only */}

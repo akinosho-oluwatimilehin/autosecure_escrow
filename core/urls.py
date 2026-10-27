@@ -9,6 +9,10 @@ from .views import (
     ChangePasswordView,
     VerifyEmailView,
     VerifyPhoneView,
+    SubmitCompanyVerificationView,
+    SecuritySettingsView,
+    SecurityAuditLogListView,
+    PerformanceRatingViewSet,
     VehicleViewSet,
     EscrowContractListCreateView,
     EscrowContractDetailView,
@@ -28,6 +32,7 @@ from .views import (
 # Router for Vehicle ModelViewSet
 router = DefaultRouter()
 router.register(r'vehicles', VehicleViewSet, basename='vehicle')
+router.register(r'ratings', PerformanceRatingViewSet, basename='rating')
 
 urlpatterns = [
     # -------------------------------------------------------------------------
@@ -40,6 +45,9 @@ urlpatterns = [
     path('auth/change-password/', ChangePasswordView.as_view(), name='change_password'),
     path('auth/verify-email/', VerifyEmailView.as_view(), name='verify_email'),
     path('auth/verify-phone/', VerifyPhoneView.as_view(), name='verify_phone'),
+    path('auth/verify-company/', SubmitCompanyVerificationView.as_view(), name='verify_company'),
+    path('auth/security-settings/', SecuritySettingsView.as_view(), name='security_settings'),
+    path('auth/audit-logs/', SecurityAuditLogListView.as_view(), name='audit_logs'),
 
     # -------------------------------------------------------------------------
     # 2. Vehicle Inventory Endpoints (ModelViewSet Router)

@@ -3,6 +3,7 @@ import re
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from .models import (
+    PerformanceRating, SecurityAuditLog,
     User, Vehicle, EscrowContract, 
     InspectionReport, LogisticsBooking, 
     EscrowDispute, WalletTransaction
@@ -45,6 +46,13 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             'address': self.user.address,
             'is_email_verified': getattr(self.user, 'is_email_verified', False),
             'is_phone_verified': getattr(self.user, 'is_phone_verified', False),
+            'verification_status': getattr(self.user, 'verification_status', 'UNVERIFIED'),
+            'cac_number': getattr(self.user, 'cac_number', ''),
+            'is_company_verified': getattr(self.user, 'is_company_verified', False),
+            'average_rating': self.user.average_rating,
+            'total_ratings': self.user.total_ratings,
+            'two_factor_enabled': getattr(self.user, 'two_factor_enabled', False),
+            'has_transaction_pin': bool(getattr(self.user, 'transaction_pin', None)),
         }
         return data
 
@@ -116,17 +124,39 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
+    average_rating = serializers.FloatField(read_only=True)
+    total_ratings = serializers.IntegerField(read_only=True)
+    is_company_verified = serializers.BooleanField(read_only=True)
+
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'role', 'phone', 'company_name', 'address']
-        read_only_fields = ['id']
+        fields = [
+            'id', 'username', 'email', 'first_name', 'last_name', 'role', 
+            'phone', 'company_name', 'address', 'verification_status', 
+            'cac_number', 'is_company_verified', 'average_rating', 'total_ratings'
+        ]
+        read_only_fields = ['id', 'average_rating', 'total_ratings', 'is_company_verified']
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
+    average_rating = serializers.FloatField(read_only=True)
+    total_ratings = serializers.IntegerField(read_only=True)
+    is_company_verified = serializers.BooleanField(read_only=True)
+    has_transaction_pin = serializers.SerializerMethodField()
+
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'role', 'phone', 'company_name', 'address', 'is_email_verified', 'is_phone_verified']
-        read_only_fields = ['id', 'username', 'role']
+        fields = [
+            'id', 'username', 'email', 'first_name', 'last_name', 'role', 
+            'phone', 'company_name', 'address', 'is_email_verified', 'is_phone_verified',
+            'verification_status', 'cac_number', 'tax_id', 'operating_license',
+            'is_company_verified', 'average_rating', 'total_ratings',
+            'two_factor_enabled', 'has_transaction_pin'
+        ]
+        read_only_fields = ['id', 'username', 'role', 'average_rating', 'total_ratings', 'is_company_verified']
+
+    def get_has_transaction_pin(self, obj):
+        return bool(obj.transaction_pin)
 
 
 class VehicleSerializer(serializers.ModelSerializer):
@@ -313,3 +343,26 @@ class WalletTransactionSerializer(serializers.ModelSerializer):
         model = WalletTransaction
         fields = ['id', 'user', 'escrow', 'amount', 'transaction_type', 'reference', 'timestamp']
         read_only_fields = ['id', 'user', 'timestamp']
+
+
+class PerformanceRatingSerializer(serializers.ModelSerializer):
+    reviewer_name = serializers.SerializerMethodField()
+    reviewee_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PerformanceRating
+        fields = ['id', 'reviewer', 'reviewer_name', 'reviewee', 'reviewee_name', 'escrow', 'rating', 'title', 'comment', 'role_rated', 'created_at']
+        read_only_fields = ['id', 'reviewer', 'reviewer_name', 'reviewee_name', 'created_at']
+
+    def get_reviewer_name(self, obj):
+        return obj.reviewer.company_name or f"{obj.reviewer.first_name} {obj.reviewer.last_name}".strip() or obj.reviewer.username
+
+    def get_reviewee_name(self, obj):
+        return obj.reviewee.company_name or f"{obj.reviewee.first_name} {obj.reviewee.last_name}".strip() or obj.reviewee.username
+
+
+class SecurityAuditLogSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SecurityAuditLog
+        fields = ['id', 'event_type', 'description', 'ip_address', 'created_at']
+        read_only_fields = ['id', 'created_at']

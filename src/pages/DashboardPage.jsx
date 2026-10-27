@@ -14,6 +14,8 @@ import { Link } from 'react-router-dom';
 import AppLayout from '../components/AppLayout';
 import FormMessage from '../components/FormMessage';
 import { escrowService, logisticsService, vehicleService } from '../services/apiServices';
+import RatingModal from '../components/RatingModal';
+import { Star } from 'lucide-react';
 import apiClient from '../services/apiClient';
 import { useAuth } from '../context/AuthContext';
 
@@ -28,7 +30,7 @@ const roleCopy = {
     title: 'Dealership dashboard',
     subtitle: 'Track listings, active deals, and delivery milestones from one place.',
     actionLabel: 'List a vehicle',
-    actionPath: '/seller',
+    actionPath: '/dealer',
   },
   REPAIR_SHOP: {
     title: 'Inspection dashboard',
@@ -52,6 +54,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [ratingTarget, setRatingTarget] = useState(null);
 
   const loadDashboard = async () => {
     if (!user) return;
@@ -128,7 +131,7 @@ export default function DashboardPage() {
       </div>
       <div>
         <div>{escrow.vehicle ? `${escrow.vehicle.year} ${escrow.vehicle.make} ${escrow.vehicle.model}` : escrow.vehicle_details}</div>
-        <div className="meta">Seller: {escrow.seller?.company_name || escrow.seller?.username || '—'}</div>
+        <div className="meta">Dealer: {escrow.seller?.company_name || escrow.seller?.username || '—'}</div>
         <div className="meta">Amount: NGN {escrow.amount}</div>
       </div>
       <div className="actions">
@@ -140,6 +143,15 @@ export default function DashboardPage() {
         {!['COMPLETED', 'CANCELLED'].includes(escrow.status) && (
           <button className="button danger" type="button" onClick={() => cancelEscrow(escrow)}>
             <XCircle size={17} /> Cancel
+          </button>
+        )}
+        {escrow.seller && escrow.seller.id !== user?.id && (
+          <button
+            className="button secondary"
+            type="button"
+            onClick={() => setRatingTarget({ user: escrow.seller, escrowId: escrow.id })}
+          >
+            <Star size={16} color="#f59e0b" fill="#f59e0b" /> Rate Dealer
           </button>
         )}
       </div>
@@ -195,7 +207,7 @@ export default function DashboardPage() {
               <section className="panel">
                 <div className="actions" style={{ justifyContent: 'space-between' }}>
                   <h2 className="panel-title" style={{ margin: 0 }}>Vehicle listings</h2>
-                  <Link to="/seller" className="button secondary" type="button">
+                  <Link to="/dealer" className="button secondary" type="button">
                     <CarFront size={17} /> Manage inventory & photos
                   </Link>
                 </div>
@@ -266,6 +278,17 @@ export default function DashboardPage() {
           </>
         )}
       </div>
+      {ratingTarget && (
+        <RatingModal
+          targetUser={ratingTarget.user}
+          escrowId={ratingTarget.escrowId}
+          onClose={() => setRatingTarget(null)}
+          onRatingSubmitted={() => {
+            setMessage('Rating submitted successfully! Thank you for validating merchant authenticity.');
+            loadDashboard();
+          }}
+        />
+      )}
     </AppLayout>
   );
 }

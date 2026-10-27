@@ -6,6 +6,7 @@ import {
   Plus,
   RefreshCcw,
   ShieldCheck,
+  Star,
   Trash2,
   UploadCloud,
   XCircle,
@@ -141,18 +142,40 @@ export default function SellerPortalPage() {
 
   return (
     <AppLayout
-      title="Seller Hub & Inventory"
-      subtitle="Publish verified vehicle listings with certified multi-angle photos for escrow transactions."
+      title="Dealer Portal & Inventory"
+      subtitle="Licensed dealership inventory management with mandatory multi-photo certification and KYB verification."
     >
       <div className="stack">
         <FormMessage error={error} success={message} />
+
+        {/* Dealer Verification & Ratings Status Banner */}
+        <div className="panel actions" style={{ justifyContent: 'space-between' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <strong>{user?.company_name || user?.username}</strong>
+              {user?.verification_status === 'VERIFIED' ? (
+                <span className="dealer-verified-badge"><ShieldCheck size={14} /> CAC Verified Dealer {user?.cac_number && `(RC: ${user.cac_number})`}</span>
+              ) : (
+                <span className="dealer-unverified-badge"><XCircle size={14} /> KYB Verification Pending</span>
+              )}
+            </div>
+            <div className="meta" style={{ marginTop: '4px' }}>
+              Rating: <strong>★ {user?.average_rating || '5.0'}</strong> ({user?.total_ratings || 0} customer reviews) · Only verified car dealers can list vehicles.
+            </div>
+          </div>
+          {user?.verification_status !== 'VERIFIED' && (
+            <Link to="/settings" className="button primary">
+              Complete Dealer KYB Verification
+            </Link>
+          )}
+        </div>
 
         {/* Create Vehicle Listing Panel */}
         <section className="panel stack">
           <div className="actions" style={{ justifyContent: 'space-between' }}>
             <h2 className="panel-title" style={{ margin: 0 }}>List a Vehicle for Escrow</h2>
-            <span className="image-count-badge valid">
-              <ShieldCheck size={14} /> Certified Dealership Listing
+            <span className="dealer-verified-badge">
+              <ShieldCheck size={14} /> Registered Dealer Listing Only
             </span>
           </div>
 

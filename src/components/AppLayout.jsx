@@ -24,7 +24,7 @@ export default function AppLayout({ title, subtitle, children }) {
         <nav className="nav-links">
           <Link to="/dashboard">Dashboard</Link>
           <Link to="/marketplace"><CarFront size={16} /> Marketplace</Link>
-          {user?.role === 'DEALERSHIP' && <Link to="/seller">Seller Hub</Link>}
+          {user?.role === 'DEALERSHIP' && <Link to="/dealer">Dealer Portal</Link>}
           {user?.role === 'REPAIR_SHOP' && <Link to="/inspections">Inspections</Link>}
           {user?.role === 'LOGISTICS' && <Link to="/carrier">Carrier</Link>}
           <Link to="/settings"><Settings size={16} /> Settings</Link>

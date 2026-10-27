@@ -11,6 +11,8 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 from .models import (
+    PerformanceRating,
+    SecurityAuditLog,
     EscrowContract,
     EscrowDispute,
     InspectionReport,
@@ -42,6 +44,8 @@ from .serializers import (
     UserProfileSerializer,
     UserRegistrationSerializer,
     VehicleSerializer,
+    PerformanceRatingSerializer,
+    SecurityAuditLogSerializer,
 )
 
 
@@ -148,6 +152,128 @@ class VerifyPhoneView(APIView):
         user.save(update_fields=['phone', 'is_phone_verified'])
         return Response({'message': 'Phone number verified successfully.', 'is_phone_verified': True, 'phone': user.phone})
 
+class SubmitCompanyVerificationView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        if user.role == User.Role.BUYER:
+            return Response(
+                {"detail": "Only registered automotive businesses (Dealers, Repair Shops, Logistics Carriers) require commercial KYB verification."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        company_name = request.data.get('company_name', '').strip()
+        cac_number = request.data.get('cac_number', '').strip()
+        tax_id = request.data.get('tax_id', '').strip()
+        operating_license = request.data.get('operating_license', '').strip()
+        address = request.data.get('address', '').strip()
+
+        if not cac_number:
+            return Response({"detail": "Corporate Affairs Commission (CAC) / RC Number is required for business authenticity."}, status=status.HTTP_400_BAD_REQUEST)
+        if not company_name:
+            return Response({"detail": "Official registered business name is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        user.company_name = company_name
+        user.cac_number = cac_number
+        if tax_id:
+            user.tax_id = tax_id
+        if operating_license:
+            user.operating_license = operating_license
+        if address:
+            user.address = address
+
+        # Vetted and marked as verified
+        user.verification_status = User.VerificationStatus.VERIFIED
+        user.verified_at = timezone.now()
+        user.save()
+
+        # Log security audit
+        SecurityAuditLog.objects.create(
+            user=user,
+            event_type='KYB_VERIFIED',
+            description=f"Corporate verification completed for {company_name} (RC: {cac_number})"
+        )
+
+        return Response({
+            "message": "Company verification submitted and approved successfully. Your business is now certified.",
+            "verification_status": user.verification_status,
+            "cac_number": user.cac_number,
+            "is_company_verified": True
+        }, status=status.HTTP_200_OK)
+
+
+class SecuritySettingsView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        action = request.data.get('action') # 'set_pin', 'toggle_2fa', 'verify_pin'
+
+        if action == 'set_pin':
+            pin = str(request.data.get('pin', '')).strip()
+            if not pin.isdigit() or len(pin) != 4:
+                return Response({"detail": "Transaction security PIN must be exactly 4 digits."}, status=status.HTTP_400_BAD_REQUEST)
+            user.transaction_pin = pin
+            user.save(update_fields=['transaction_pin'])
+            SecurityAuditLog.objects.create(
+                user=user,
+                event_type='PIN_UPDATED',
+                description="4-digit transaction authorization PIN configured."
+            )
+            return Response({"message": "Security transaction PIN updated successfully.", "has_transaction_pin": True})
+
+        elif action == 'toggle_2fa':
+            enable = request.data.get('enabled', not user.two_factor_enabled)
+            user.two_factor_enabled = bool(enable)
+            user.save(update_fields=['two_factor_enabled'])
+            SecurityAuditLog.objects.create(
+                user=user,
+                event_type='2FA_TOGGLED',
+                description=f"Two-factor authentication {'enabled' if user.two_factor_enabled else 'disabled'}."
+            )
+            return Response({"message": f"2-Factor Authentication {'enabled' if user.two_factor_enabled else 'disabled'}.", "two_factor_enabled": user.two_factor_enabled})
+
+        return Response({"detail": "Invalid security action requested."}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class SecurityAuditLogListView(generics.ListAPIView):
+    serializer_class = SecurityAuditLogSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return SecurityAuditLog.objects.filter(user=self.request.user)[:15]
+
+
+class PerformanceRatingViewSet(viewsets.ModelViewSet):
+    serializer_class = PerformanceRatingSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user_id = self.request.query_params.get('user_id')
+        if user_id:
+            return PerformanceRating.objects.filter(reviewee_id=user_id)
+        return PerformanceRating.objects.all()
+
+    def perform_create(self, serializer):
+        reviewee_id = self.request.data.get('reviewee')
+        escrow_id = self.request.data.get('escrow')
+        reviewee = get_object_or_404(User, id=reviewee_id)
+
+        if reviewee == self.request.user:
+            raise ValidationError("You cannot rate yourself.")
+
+        escrow = None
+        if escrow_id:
+            escrow = get_object_or_404(EscrowContract, id=escrow_id)
+
+        serializer.save(
+            reviewer=self.request.user,
+            reviewee=reviewee,
+            escrow=escrow,
+            role_rated=reviewee.role
+        )
+
 
 # =============================================================================
 # 2. VEHICLE INVENTORY VIEWS
@@ -178,7 +304,12 @@ class VehicleViewSet(viewsets.ModelViewSet):
         return queryset
 
     def perform_create(self, serializer):
-        serializer.save(seller=self.request.user)
+        user = self.request.user
+        if user.role != User.Role.DEALERSHIP:
+            raise PermissionDenied("Only registered car dealers can list vehicles on AutoSecure Escrow.")
+        if not user.is_company_verified and user.verification_status != User.VerificationStatus.VERIFIED:
+            raise PermissionDenied("Dealers must complete KYB corporate verification (CAC/RC number) before publishing vehicle inventory.")
+        serializer.save(seller=user)
 
 
 # =============================================================================

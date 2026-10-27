@@ -12,8 +12,8 @@ const roleOptions = [
   },
   {
     value: 'DEALERSHIP',
-    label: 'Seller',
-    description: 'List vehicles and receive payouts',
+    label: 'Dealer',
+    description: 'Licensed car dealerships & verified automotive merchants only',
   },
   {
     value: 'REPAIR_SHOP',

@@ -47,6 +47,36 @@ export const authService = {
     const response = await apiClient.post('/auth/verify-phone/', payload);
     return response.data;
   },
+
+  submitCompanyVerification: async (kybData) => {
+    const response = await apiClient.post('/auth/verify-company/', kybData);
+    return response.data;
+  },
+
+  updateSecuritySettings: async (secData) => {
+    const response = await apiClient.post('/auth/security-settings/', secData);
+    return response.data;
+  },
+
+  getAuditLogs: async () => {
+    const response = await apiClient.get('/auth/audit-logs/');
+    return response.data;
+  },
+};
+
+// -----------------------------------------------------------------------------
+// Ratings & Reviews Service
+// -----------------------------------------------------------------------------
+export const ratingService = {
+  getRatingsForUser: async (userId) => {
+    const response = await apiClient.get('/ratings/', { params: { user_id: userId } });
+    return response.data;
+  },
+
+  submitRating: async (ratingData) => {
+    const response = await apiClient.post('/ratings/', ratingData);
+    return response.data;
+  },
 };
 
 // -----------------------------------------------------------------------------

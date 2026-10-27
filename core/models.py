@@ -20,6 +20,44 @@ class User(AbstractUser):
     is_email_verified = models.BooleanField(default=False)
     is_phone_verified = models.BooleanField(default=False)
 
+    # KYB Business verification fields
+    class VerificationStatus(models.TextChoices):
+        UNVERIFIED = 'UNVERIFIED', 'Unverified'
+        PENDING = 'PENDING', 'Under Review'
+        VERIFIED = 'VERIFIED', 'Verified Company'
+        REJECTED = 'REJECTED', 'Rejected'
+
+    verification_status = models.CharField(
+        max_length=20,
+        choices=VerificationStatus.choices,
+        default=VerificationStatus.UNVERIFIED,
+        help_text="Corporate KYB vetting status"
+    )
+    cac_number = models.CharField(max_length=50, blank=True, null=True, help_text="RC Number or CAC Registration")
+    tax_id = models.CharField(max_length=50, blank=True, null=True, help_text="Tax Identification Number (TIN)")
+    operating_license = models.CharField(max_length=100, blank=True, null=True, help_text="Trade license or physical lot permit")
+    verified_at = models.DateTimeField(blank=True, null=True)
+
+    # Security enhancements
+    two_factor_enabled = models.BooleanField(default=False)
+    transaction_pin = models.CharField(max_length=128, blank=True, null=True, help_text="4-digit Escrow Authorization PIN")
+
+    @property
+    def is_company_verified(self):
+        return self.verification_status == self.VerificationStatus.VERIFIED
+
+    @property
+    def average_rating(self):
+        ratings = self.received_ratings.all()
+        if not ratings.exists():
+            return 5.0 if self.role != self.Role.BUYER else 0.0
+        total = sum(r.rating for r in ratings)
+        return round(total / ratings.count(), 1)
+
+    @property
+    def total_ratings(self):
+        return self.received_ratings.count()
+
     def __str__(self):
         return f"{self.username} ({self.get_role_display()})"
 
@@ -161,3 +199,34 @@ class WalletTransaction(models.Model):
 
     def __str__(self):
         return f"{self.get_transaction_type_display()} - NGN {self.amount} ({self.user.username})"
+
+
+class PerformanceRating(models.Model):
+    reviewer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='given_ratings')
+    reviewee = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_ratings')
+    escrow = models.ForeignKey(EscrowContract, on_delete=models.SET_NULL, null=True, blank=True, related_name='ratings')
+    rating = models.PositiveSmallIntegerField(default=5)  # 1 to 5
+    title = models.CharField(max_length=120, blank=True, default='')
+    comment = models.TextField(blank=True, default='')
+    role_rated = models.CharField(max_length=20, blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.reviewer.username} rated {self.reviewee.username} ({self.rating} stars)"
+
+
+class SecurityAuditLog(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='audit_logs')
+    event_type = models.CharField(max_length=50)
+    description = models.CharField(max_length=255)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.user.username} - {self.event_type} at {self.created_at}"

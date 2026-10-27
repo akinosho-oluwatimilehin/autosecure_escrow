@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Plus, RefreshCcw, ShieldCheck } from 'lucide-react';
+import { Plus, RefreshCcw, ShieldCheck, Star, BadgeCheck } from 'lucide-react';
 import AppLayout from '../components/AppLayout';
 import FormMessage from '../components/FormMessage';
 import { escrowService, vehicleService } from '../services/apiServices';
@@ -80,7 +80,7 @@ export default function MarketplacePage() {
   };
 
   return (
-    <AppLayout title="Marketplace" subtitle="List vehicles or open escrow for an available vehicle.">
+    <AppLayout title="Dealer Marketplace" subtitle="Browse verified inventory from licensed car dealers protected by segregated escrow.">
       <div className="stack">
         <FormMessage error={error} success={message} />
         {user?.role === 'DEALERSHIP' && (
@@ -91,8 +91,8 @@ export default function MarketplacePage() {
                 Upload vehicle listings with mandatory multi-photo inspection verification.
               </p>
             </div>
-            <a href="/seller" className="button primary">
-              <Plus size={17} /> Go to Seller Hub & List Vehicle
+            <a href="/dealer" className="button primary">
+              <Plus size={17} /> Go to Dealer Portal & List Vehicle
             </a>
           </section>
         )}
@@ -128,6 +128,26 @@ export default function MarketplacePage() {
                   <div className="actions" style={{ justifyContent: 'space-between' }}>
                     <strong>{vehicle.year} {vehicle.make} {vehicle.model}</strong>
                     <span className="status-pill">Available</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', fontSize: '13px' }}>
+                    <span style={{ fontWeight: 600, color: '#0d9488' }}>
+                      Dealer: {vehicle.seller?.company_name || vehicle.seller?.username}
+                    </span>
+                    <span className="rating-pill">
+                      <Star size={12} fill="#b45309" color="#b45309" />
+                      {vehicle.seller?.average_rating || '5.0'} ({vehicle.seller?.total_ratings || 0})
+                    </span>
+                  </div>
+                  <div className="meta">
+                    {vehicle.seller?.is_company_verified ? (
+                      <span className="dealer-verified-badge" style={{ padding: '2px 8px', fontSize: '11px' }}>
+                        <ShieldCheck size={12} /> Verified Dealer {vehicle.seller?.cac_number && `(RC: ${vehicle.seller.cac_number})`}
+                      </span>
+                    ) : (
+                      <span className="dealer-unverified-badge" style={{ padding: '2px 8px', fontSize: '11px' }}>
+                        Dealer Verification Pending
+                      </span>
+                    )}
                   </div>
                   <div className="meta">VIN: {vehicle.vin}</div>
                   <div className="meta">Mileage: {vehicle.mileage?.toLocaleString()} km</div>

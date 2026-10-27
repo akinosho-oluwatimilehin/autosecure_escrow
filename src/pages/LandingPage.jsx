@@ -21,9 +21,9 @@ const roleCards = [
     description: 'Funds lock on offer acceptance. Release is automatic — no manual handoff, no chasing.',
   },
   {
-    id: 'seller',
-    title: 'SELLER',
-    description: 'List, verify the deposit, and ship to a confirmed address. Payout lands on clearance.',
+    id: 'dealer',
+    title: 'VERIFIED DEALER',
+    description: 'Only licensed car dealers with CAC business verification can list inventory and receive automated escrow payouts.',
   },
   {
     id: 'inspector',
@@ -56,7 +56,7 @@ const flowSteps = [
   {
     number: '04',
     title: 'Payout',
-    description: 'The vault releases to the seller once the key verifies and title transfers.',
+    description: 'The vault releases to the dealer once the key verifies and title transfers.',
   },
 ];
 
